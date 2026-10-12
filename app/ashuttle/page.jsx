@@ -231,7 +231,7 @@ const BODY_HTML = `<div class="toolbar">
     <button class="btn ghost" onclick="window.print()">🖨️ Print / PDF</button>
     <button class="btn ghost" onclick="saveImage()" id="imgBtn">🖼️ Save image</button>
     <button class="btn ghost" onclick="resetAll()">↺ Reset</button>
-    <span class="saved" id="savedMsg"></span>
+    <button class="btn primary" onclick="finalizeDay()" id="closeBtn">✓ 마감</button><button class="btn" onclick="reopenDay()" id="reopenBtn" hidden>마감 해제</button><button class="btn" onclick="openVehicles()">차량 스케줄 →</button><span id="closeStatus" role="status"></span><span class="saved" id="savedMsg"></span>
     <span class="hint">Drag cards to move · click text to edit</span>
   </div>
 
@@ -351,23 +351,24 @@ export default function AshuttlePage() {
     };
 
     let state = JSON.parse(JSON.stringify(seed));
+    let closeInfo=null, closeBusy=false;
 
     /* ===== date helpers ===== */
     const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
     const WEEK=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
     function todayISO(){ const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
     function fmtDate(iso){ const d=new Date(iso+"T00:00:00"); const dd=String(d.getDate()).padStart(2,"0"); return MONTHS[d.getMonth()]+" "+dd+", "+d.getFullYear()+"  "+WEEK[d.getDay()]; }
-    function shiftISO(iso, delta){ const d=new Date(iso+"T00:00:00"); d.setDate(d.getDate()+delta); return d.toISOString().slice(0,10); }
+    function shiftISO(iso, delta){ const d=new Date(iso+"T12:00:00Z"); d.setUTCDate(d.getUTCDate()+delta); return d.toISOString().slice(0,10); }
 
     /* ===== Supabase REST (shared storage for all teachers) ===== */
     const SB_HEAD={ apikey:SB_KEY, Authorization:"Bearer "+SB_KEY };
     async function sbGet(iso){ try{ const r=await fetch(SB_URL+"/rest/v1/pickup_schedules?day=eq."+iso+"&select=data",{headers:SB_HEAD}); const a=await r.json(); return (a&&a[0])?a[0].data:null; }catch(e){ return null; } }
     async function sbLatest(){ try{ const r=await fetch(SB_URL+"/rest/v1/pickup_schedules?select=day,data&order=day.desc&limit=1",{headers:SB_HEAD}); const a=await r.json(); return (a&&a[0])?a[0]:null; }catch(e){ return null; } }
-    async function sbUpsert(iso,data){ await fetch(SB_URL+"/rest/v1/pickup_schedules",{method:"POST",headers:Object.assign({},SB_HEAD,{"Content-Type":"application/json",Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify({day:iso,data:data,updated_at:new Date().toISOString()})}); }
+    async function sbUpsert(iso,data){ const response=await fetch(SB_URL+"/rest/v1/pickup_schedules",{method:"POST",headers:Object.assign({},SB_HEAD,{"Content-Type":"application/json",Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify({day:iso,data:data,updated_at:new Date().toISOString()})}); if(!response.ok)throw new Error("Save failed"); }
     async function dayExists(iso){ return (await sbGet(iso))!==null; }
 
     /* ===== save / load ===== */
-    async function save(){ try{ state.date=fmtDate(currentISO); await sbUpsert(currentISO,state); flash("Saved \u2713"); }catch(e){ flash("Save failed"); } }
+    async function save(){ if(closeInfo?.closedAt||closeBusy)return; try{ state.date=fmtDate(currentISO); await sbUpsert(currentISO,state); flash("Saved \u2713"); }catch(e){ flash("Save failed"); } }
     async function loadDay(iso){ const d=await sbGet(iso); state = d ? d : JSON.parse(JSON.stringify(seed)); if(!state.absent) state.absent=[]; currentISO=iso; state.date=fmtDate(iso); }
     async function load(){
       currentISO = todayISO();
@@ -382,16 +383,40 @@ export default function AshuttlePage() {
       if(!state.absent) state.absent=[];
       state.date = fmtDate(currentISO);
     }
-    async function goDay(delta){ const t=shiftISO(currentISO,delta); if(await dayExists(t)){ await loadDay(t); } else { const c=JSON.parse(JSON.stringify(state)); c.date=fmtDate(t); state=c; currentISO=t; await save(); } render(); }
-    async function jumpTo(iso){ if(!iso) return; if(await dayExists(iso)){ await loadDay(iso); } else { const c=JSON.parse(JSON.stringify(state)); c.date=fmtDate(iso); state=c; currentISO=iso; await save(); } render(); }
+    async function goDay(delta){ if(closeBusy)return;closeInfo=null; const t=shiftISO(currentISO,delta); if(await dayExists(t)){ await loadDay(t); } else { const c=JSON.parse(JSON.stringify(state)); c.date=fmtDate(t); state=c; currentISO=t; await save(); } render(); }
+    async function jumpTo(iso){ if(!iso||closeBusy) return;closeInfo=null; if(await dayExists(iso)){ await loadDay(iso); } else { const c=JSON.parse(JSON.stringify(state)); c.date=fmtDate(iso); state=c; currentISO=iso; await save(); } render(); }
     function flash(msg){ const el=document.getElementById("savedMsg"); if(!el) return; el.textContent=msg; setTimeout(function(){ el.textContent=""; },1600); }
-    async function resetAll(){ if(!confirm("Reset THIS day to the base schedule? (other days are kept)")) return; state=JSON.parse(JSON.stringify(seed)); state.date=fmtDate(currentISO); await save(); render(); }
+    async function resetAll(){ if(closeInfo?.closedAt||closeBusy)return; if(!confirm("Reset THIS day to the base schedule? (other days are kept)")) return; state=JSON.parse(JSON.stringify(seed)); state.date=fmtDate(currentISO); await save(); render(); }
+
+    async function refreshClosure(){
+      const day=currentISO;
+      try{const r=await fetch('/api/admin/commute-close?day='+day,{credentials:'same-origin',cache:'no-store'});const result=await r.json();if(!r.ok)throw Error(result.error||'마감 상태 조회 실패');if(day!==currentISO)return;closeInfo=result;if(result.closedAt&&result.data){state=result.data;document.getElementById('board').innerHTML='';renderLegend();renderAbsent();state.drivers.forEach((drv,di)=>{const block=document.createElement('div');block.className='driver-block';const grid=document.createElement('div');grid.className='driver-grid';grid.appendChild(cellEl(di,'am',drv.name,'AM · Pick up'));grid.appendChild(cellEl(di,'pm',drv.name,'PM · Drop off'));block.appendChild(grid);document.getElementById('board').appendChild(block);});}updateClosureUI();}
+      catch(e){if(day===currentISO){document.getElementById('closeStatus').textContent=e.message;}}
+    }
+    function updateClosureUI(){
+      const closed=!!closeInfo?.closedAt;
+      document.getElementById('closeBtn').hidden=closed;document.getElementById('closeBtn').disabled=closeBusy;
+      document.getElementById('reopenBtn').hidden=!closed;document.getElementById('reopenBtn').disabled=closeBusy;
+      document.getElementById('closeStatus').textContent=closed?'🔒 마감됨 · 차량 스케줄 반영 완료':'작성 중 · 마감 후 차량 스케줄에 반영';
+      ['board','legend','absent'].forEach(id=>{const el=document.getElementById(id);if(el)el.inert=closed||closeBusy;});
+    }
+    async function changeClosure(action){
+      if(closeBusy)return;const day=currentISO;closeBusy=true;updateClosureUI();
+      try{state.date=fmtDate(day);const r=await fetch('/api/admin/commute-close',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({day,action,data:action==='close'?state:undefined})});const result=await r.json();if(!r.ok)throw Error(result.error||'마감 처리 실패');if(day!==currentISO)return;closeInfo=result;flash(action==='close'?'마감 완료 ✓':'마감 해제 ✓');}
+      catch(e){alert(e.message);}
+      finally{closeBusy=false;updateClosureUI();}
+    }
+    async function finalizeDay(){if(document.activeElement?.blur)document.activeElement.blur();await changeClosure('close');}
+    async function reopenDay(){if(confirm('마감을 해제하면 차량 스케줄에서 이 통학표가 빠집니다. 수정 후 다시 마감해주세요.'))await changeClosure('reopen');}
+    function openVehicles(){window.top.location.href='/admin/vehicle-schedule?date='+currentISO;}
+    window.finalizeDay=finalizeDay;window.reopenDay=reopenDay;window.openVehicles=openVehicles;
 
     /* ===== rendering ===== */
     function render(){
       document.getElementById("dateHead").textContent = state.date;
       const dp = document.getElementById("datePick");
       if(dp) dp.value = currentISO;
+      void refreshClosure();
       renderLegend();
       renderAbsent();
       const board = document.getElementById("board");
@@ -600,7 +625,7 @@ export default function AshuttlePage() {
     }
 
     /* ===== add driver ===== */
-    function addDriver(){
+    function addDriver(){ if(closeInfo?.closedAt||closeBusy)return;
       const nm = prompt("New driver name (e.g. K. Sam)", "K. ");
       if(!nm) return;
       state.drivers.push({ name:nm, am:[{time:"8:00",teacher:"",cards:[]}], pm:[{time:"5:00",teacher:"",cards:[]}] });

@@ -59,7 +59,7 @@ export async function GET(req:Request){
   return reply({pickups:pickups.map(p=>({...p,bookings:bMap.get(p.booking_id)||null})),bookings,
    checkinExtras:checkinExtras.filter(p=>!['cancelled','취소'].includes(String(bMap.get(p.booking_id)?.status||''))).map(p=>({...p,bookings:bMap.get(p.booking_id)||null})),
    drivers:drivers.map(d=>({id:d.id,name:d.name})),shuttles:shuttles.map(s=>({...s,bookings:bMap.get(s.booking_id)||null,booker_name:bMap.get(s.booking_id)?.booker_name||s.portal_name||''})),
-   fieldtrips,scheduleItems,commutes,overrides});
+   fieldtrips,scheduleItems,commutes:commutes.filter(c=>c.finalized_at&&c.finalized_data).map(c=>({day:c.day,data:c.finalized_data})),overrides});
  }catch{return reply({error:'일부 원본 자료를 불러오지 못했습니다. 새로고침해주세요. 빈 일정으로 처리하지 않았습니다.'},503);}
 }
 export async function POST(req:Request){

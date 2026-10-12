@@ -27,7 +27,7 @@ export default function VehicleSchedulePage(){
  const [drivers,setDrivers]=useState<Driver[]>([]),[dayMoves,setDayMoves]=useState<VehMovement[]>([]),[requests,setRequests]=useState<VehMovement[]>([]);
  const [states,setStates]=useState<Record<string,DayState>>({});
  const [editor,setEditor]=useState<VehicleRow|null>(null),[saving,setSaving]=useState(false),[sources,setSources]=useState(false);
- useEffect(()=>{if(!isAdminAuthed()){router.replace('/login');return;}setAuthed(true);},[router]);
+ useEffect(()=>{if(!isAdminAuthed()){router.replace('/login');return;}const requested=new URLSearchParams(window.location.search).get('date');if(requested&&/^\d{4}-\d{2}-\d{2}$/.test(requested))setDate(requested);setAuthed(true);},[router]);
  const load=useCallback(async(signal?:AbortSignal)=>{
   if(!authed)return;
   setLoading(true);setError('');
