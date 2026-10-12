@@ -116,7 +116,7 @@ function _renderStaffHome(emp){
     document.getElementById('swhTasks').innerHTML=rows.length?rows.slice(0,6).map(function(t){
       var due=(t.due||'').slice(0,10),late=due&&due<todayStr(),who=getP(t.assignee),author=getP(t.createdBy);
       var status=late?'기한 초과':due===todayStr()?'오늘 마감':due?due.slice(5).replace('-','/')+' 마감':'기한 없음';
-      return '<button class="swh-task" data-task="'+_staffSafe(t.id)+'"><span class="swh-task-icon" aria-hidden="true">↗</span><span class="swh-task-text"><b>'+_staffSafe(t.title||'제목 없음')+_staffTaskAttentionBadge(t)+'</b><small>'+_staffSafe(_staffHomeFilter==='outgoing'?'담당 '+(who?who.name:t.assignee||'미배정'):'지시자 '+(author?author.name:t.createdBy||'미지정'))+(t.files&&t.files.length?' · 첨부 '+t.files.length:'')+'</small></span><span class="swh-pill '+(late?'is-late':due===todayStr()?'is-today':'')+'">'+status+'</span></button>';
+      return '<button class="swh-task" data-task="'+_staffSafe(t.id)+'"><span class="swh-task-icon" aria-hidden="true">↗</span><span class="swh-task-text"><b>'+_staffSafe(t.title||'제목 없음')+secretTaskBadge(t)+_staffTaskAttentionBadge(t)+'</b><small>'+_staffSafe(_staffHomeFilter==='outgoing'?'담당 '+(who?who.name:t.assignee||'미배정'):'지시자 '+(author?author.name:t.createdBy||'미지정'))+(t.files&&t.files.length?' · 첨부 '+t.files.length:'')+'</small></span><span class="swh-pill '+(late?'is-late':due===todayStr()?'is-today':'')+'">'+status+'</span></button>';
     }).join('')+(rows.length>6?'<button class="swh-more" data-tab="board">보드에서 '+rows.length+'건 모두 보기 →</button>':''):'<div class="swh-empty">해당하는 미완료 업무가 없습니다.</div>';
   }
   renderTasks();
