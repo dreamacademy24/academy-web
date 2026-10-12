@@ -138,6 +138,10 @@ export default function AdminHubPage() {
         <h1>관리자 홈</h1>
         <p>안녕하세요, {name}님{role === 'admin' ? ' (관리자)' : ' (스태프)'}</p>
       </div>
+      <a href="https://dream-island-demo.vercel.app/?course=dr-f1&demo=staff" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", borderRadius: 12, background: "#e8f4f0", border: "1px solid #b9d9cc", color: "#245d4d", textDecoration: "none" }}>
+        <span><strong style={{ display: "block", fontSize: 16 }}>학습 앱 데모</strong><span style={{ display: "block", fontSize: 12, marginTop: 4 }}>드림 아일랜드 · 직원 체험 · 새 탭에서 열기</span></span>
+        <span aria-hidden="true" style={{ fontSize: 22 }}>↗</span>
+      </a>
       {groups.map((g, gi) => (
         <div key={gi}>
           <div className="hub-sec">{g.title}</div>
