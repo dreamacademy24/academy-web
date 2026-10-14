@@ -689,7 +689,7 @@ export default function OnlineClassPage() {
           const [sy, sm] = sheetMonth.split("-").map(Number);
           const lastDay = new Date(sy, sm, 0).getDate();
           const days = Array.from({ length: lastDay }, (_, i) => i + 1);
-          const WD = ["일", "월", "화", "수", "목", "금", "토", "일"];
+          const WD = ["일", "월", "화", "수", "목", "금", "토"];
           const cellMap = new Map<string, any>();
           sheetSessions.forEach((s: any) => {
             const eid = s.enrollment_id || (s.enrollment && s.enrollment.id);
@@ -850,7 +850,7 @@ export default function OnlineClassPage() {
         const byDate: Record<string, any[]> = {};
         wkSessions.forEach(x => { const k = x.scheduled_date; (byDate[k] = byDate[k] || []).push(x); });
         Object.values(byDate).forEach(arr => arr.sort((a, b) => (a.scheduled_time_kr || "").localeCompare(b.scheduled_time_kr || "")));
-        const DN = ["월", "화", "수", "목", "금", "토"];
+        const DN = ["월", "화", "수", "목", "금", "토", "일"];
         return (
           <div style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 14, padding: 18 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
@@ -1405,3 +1405,4 @@ export default function OnlineClassPage() {
     )}
   </>);
 }
+
