@@ -118,15 +118,24 @@ export default function OnlineClassPage() {
   const [wkOffset, setWkOffset] = useState(0);
   const [wkSessions, setWkSessions] = useState<any[]>([]);
   const [wkLoading, setWkLoading] = useState(false);
+  const [wkError, setWkError] = useState("");
   useEffect(() => {
     if (tab !== "weekly") return;
     const now = new Date(); const dow = (now.getDay() + 6) % 7; // 월=0
     const mon = new Date(now); mon.setDate(now.getDate() - dow + wkOffset * 7);
     const f = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
+    const sat = new Date(mon); sat.setDate(mon.getDate() + 6);
     setWkLoading(true);
-    fetch(`/api/online-class/sessions?start=${f(mon)}&end=${f(sat)}`).then(r => r.ok ? r.json() : { sessions: [] })
-      .then((d: any) => setWkSessions(d.sessions || [])).catch(() => {}).finally(() => setWkLoading(false));
+    let current = true;
+    const refresh = () => fetch(`/api/online-class/sessions?start=${f(mon)}&end=${f(sat)}`, { cache: "no-store" })
+      .then(r => { if (!r.ok) throw new Error("일정을 불러오지 못했습니다. 새로고침해주세요."); return r.json(); })
+      .then((d: any) => { if (current) { setWkSessions(d.sessions || []); setWkError(""); } })
+      .catch(() => { if (current) setWkError("일정을 불러오지 못했습니다. 새로고침해주세요."); })
+      .finally(() => { if (current) setWkLoading(false); });
+    refresh();
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    return () => { current = false; clearInterval(timer); window.removeEventListener("focus", refresh); };
   }, [tab, wkOffset]);
   const [confirmedIds, setConfirmedIds] = useState<Set<string>>(new Set());
   const [closedIds, setClosedIds] = useState<Set<string>>(new Set());
@@ -680,7 +689,7 @@ export default function OnlineClassPage() {
           const [sy, sm] = sheetMonth.split("-").map(Number);
           const lastDay = new Date(sy, sm, 0).getDate();
           const days = Array.from({ length: lastDay }, (_, i) => i + 1);
-          const WD = ["일", "월", "화", "수", "목", "금", "토"];
+          const WD = ["일", "월", "화", "수", "목", "금", "토", "일"];
           const cellMap = new Map<string, any>();
           sheetSessions.forEach((s: any) => {
             const eid = s.enrollment_id || (s.enrollment && s.enrollment.id);
@@ -836,7 +845,7 @@ export default function OnlineClassPage() {
         const now = new Date(); const dow = (now.getDay() + 6) % 7;
         const mon = new Date(now); mon.setDate(now.getDate() - dow + wkOffset * 7);
         const f = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-        const days = Array.from({ length: 6 }, (_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return d; });
+        const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return d; });
         const todayStr2 = f(new Date());
         const byDate: Record<string, any[]> = {};
         wkSessions.forEach(x => { const k = x.scheduled_date; (byDate[k] = byDate[k] || []).push(x); });
@@ -855,8 +864,9 @@ export default function OnlineClassPage() {
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
               {tutors.map(t => <span key={t.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, padding: "3px 9px" }}><span style={{ width: 9, height: 9, borderRadius: 5, background: getTutorColor(t.name_display) }} />{t.name_display}</span>)}
             </div>
-            {wkLoading ? <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>불러오는 중...</div> : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(6,minmax(0,1fr))", gap: 8 }}>
+            {wkError && <p role="alert" style={{ color: "#b91c1c" }}>{wkError}</p>}
+              {wkLoading ? <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>불러오는 중...</div> : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 8 }}>
                 {days.map((d, i) => {
                   const k = f(d); const list = byDate[k] || [];
                   const isToday = k === todayStr2;

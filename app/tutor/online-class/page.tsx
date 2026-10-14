@@ -170,6 +170,12 @@ function Inner() {
   useEffect(() => { loadEnrollments(); }, [loadEnrollments]);
   useEffect(() => { loadToday(); }, [loadToday]);
   useEffect(() => { loadWeek(); }, [loadWeek]);
+  useEffect(() => {
+    const refresh = () => { void loadToday(); void loadWeek(); };
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    return () => { clearInterval(timer); window.removeEventListener("focus", refresh); };
+  }, [loadToday, loadWeek]);
 
   // notifications (30s poll)
   const loadNotifs = useCallback(async () => {
@@ -552,7 +558,7 @@ function Inner() {
           {/* ══ SCHEDULE ══ */}
           {tab === "schedule" && (() => {
             const mon = weekStart(weekOffset);
-            const days = Array.from({ length: 6 }, (_, i) => addDays(fmtD(mon), i)); // Mon~Sat
+            const days = Array.from({ length: 7 }, (_, i) => addDays(fmtD(mon), i)); // Mon~Sun
             const todayStr = fmtD(new Date());
             const byDay: Record<string, Ses[]> = {};
             weekSessions.forEach(s => { if (!byDay[s.scheduled_date]) byDay[s.scheduled_date] = []; byDay[s.scheduled_date].push(s); });
@@ -700,7 +706,7 @@ function Css() {
     .sbtns{display:flex;gap:6px}
     .hist{margin-top:10px;border-top:1px solid #eef2f7;padding-top:8px;display:flex;flex-direction:column;gap:5px}
     .hrow{display:flex;align-items:center;gap:8px;font-size:12.5px}
-    .wgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+    .wgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
     .wcol{background:#fff;border:1px solid #e8ecf3;border-radius:12px;padding:10px;min-height:120px}
     .wcol.today{border-color:#1a6fc4;box-shadow:0 0 0 2px rgba(26,111,196,0.12)}
     .whead{text-align:center;font-size:13px;font-weight:800;margin-bottom:8px}

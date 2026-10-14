@@ -29,9 +29,10 @@ export async function GET(req: Request) {
   // 날짜 기반 조회 (enrollment + tutor JOIN)
   let q = supabase
     .from('online_sessions')
-    .select('*, enrollment:online_enrollments(id, student_name, student_name_en, student_birth_year, status), tutor:online_tutors(id, name_display, name_en)')
+    .select('*, enrollment:online_enrollments(id, student_name, student_name_en, student_birth_year, status, tutor_id), tutor:online_tutors(id, name_display, name_en)')
     .order('scheduled_time_ph')
     .order('scheduled_date')
+    .order('id')
 
   if (date) {
     q = q.eq('scheduled_date', date)
@@ -41,9 +42,27 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'enrollment_id, date, or start/end required' }, { status: 400 })
   }
 
-  const { data, error } = await q
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ sessions: data ?? [] })
+  // Read every page; never silently truncate a busy week/month.
+  const rows: any[] = []
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await q.range(offset, offset + 499)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    rows.push(...(data || []))
+    if (!data || data.length < 500) break
+  }
+  // Explicit session teachers (including substitutes) always take precedence.
+  const missingIds = [...new Set(rows.filter(s => !s.tutor_id && s.enrollment?.tutor_id).map(s => s.enrollment.tutor_id))]
+  let tutorMap = new Map<string, any>()
+  if (missingIds.length) {
+    const { data, error } = await supabase.from('online_tutors').select('id,name_display,name_en').in('id', missingIds)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    tutorMap = new Map((data || []).map(t => [t.id, t]))
+  }
+  const sessions = rows.map(s => s.tutor_id ? s : {
+    ...s, tutor_id: s.enrollment?.tutor_id || null,
+    tutor: tutorMap.get(s.enrollment?.tutor_id) || null,
+  })
+  return NextResponse.json({ sessions }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function PATCH(req: Request) {
