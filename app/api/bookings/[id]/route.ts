@@ -180,17 +180,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   if (commute && (body.academy_start !== undefined || body.academy_end !== undefined)) {
-    const snapshot = await supabase.from('invoice_snapshots').select('saved_data').eq('booking_id',id).maybeSingle()
+    const snapshot = await supabase.from('invoice_snapshots').select('id,saved_data').eq('booking_id',id)
     if (snapshot.error) return NextResponse.json({error:'인보이스 일정 조회 실패: '+snapshot.error.message},{status:500})
-    if (snapshot.data?.saved_data) {
-      const saved = snapshot.data.saved_data
+    for (const row of snapshot.data || []) {
+      if (!row.saved_data) continue
+      const saved = row.saved_data
       const next = {...saved,students:Array.isArray(saved.students)?saved.students.map((s:Record<string,unknown>)=>({
         ...s,
         ...(body.academy_start !== undefined ? {academyStart:body.academy_start,academy_start:body.academy_start}:{}),
         ...(body.academy_end !== undefined ? {academyEnd:body.academy_end,academy_end:body.academy_end}:{}),
         ...(scheduleChanged ? {academyWeeks:String(body.accom_weeks)}:{})
       })):saved.students}
-      const sync = await supabase.from('invoice_snapshots').update({saved_data:next}).eq('booking_id',id)
+      const sync = await supabase.from('invoice_snapshots').update({saved_data:next}).eq('id',row.id)
       if (sync.error) return NextResponse.json({error:'인보이스 일정 동기화 실패: '+sync.error.message},{status:500})
     }
   }
