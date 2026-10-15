@@ -1,4 +1,5 @@
 "use client";
+import {loadActiveResortInvoices, assertActiveResortBooking, isCancelledResortStatus} from "@/lib/resortBookingStatus";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { matchesStayView, compareCheckin, resortToday, type ResortStayView } from "@/lib/resortStayView";
 import { supabase } from "@/lib/supabase";
@@ -56,11 +57,10 @@ export default function ResortPaymentsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from("resort_invoices").select("*").order("period_start", { ascending: true, nullsFirst: false }).order("invoice_no", { ascending: true });
-    setRows((data || []) as InvRow[]);
+    try { const data = await loadActiveResortInvoices(); setRows(data as InvRow[]); setViewInv(old=>old&&data.some(r=>r.id===old.id)?old:null); } catch(e) { setRows([]); setViewInv(null); alert((e as Error).message); }
     setLoading(false);
   }, []);
-  useEffect(() => { if (authed) load(); }, [authed, load]);
+  useEffect(() => { if (!authed)return; load(); const refresh=()=>{void load();}; window.addEventListener("focus",refresh); const timer=setInterval(refresh,30000); return()=>{window.removeEventListener("focus",refresh);clearInterval(timer);}; }, [authed, load]);
 
   const filtered = useMemo(() => rows.filter(r => {
     if (!matchesStayView(r.period_end, stayView, stayToday)) return false;
@@ -83,6 +83,7 @@ export default function ResortPaymentsPage() {
   }, [filtered]);
 
   async function markPaid(r: InvRow) {
+    try { await assertActiveResortBooking(r); } catch(e) { alert((e as Error).message); void load(); return; }
     const memo = prompt(`"${r.guest_name}" ${fmtMoney(r.amount, r.currency)} 결제완료 처리합니다.\n메모 (선택):`, r.paid_memo || "");
     if (memo === null) return;
     const { error } = await supabase.from("resort_invoices")

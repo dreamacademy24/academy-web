@@ -1,4 +1,5 @@
 "use client";
+import {loadActiveResortInvoices, assertActiveResortBooking, isCancelledResortStatus} from "@/lib/resortBookingStatus";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { matchesStayView, compareCheckin, resortToday, type ResortStayView } from "@/lib/resortStayView";
 import { supabase } from "@/lib/supabase";
@@ -195,7 +196,7 @@ export default function ResortInvoicePage() {
       .order("checkin_date", { ascending: true, nullsFirst: false });
     const kw = resort === "jaypark" ? ["제이파크", "jaypark"] : ["큐브", "cubenine"];
     const list = ((data || []) as BookingLite[]).filter(b => {
-      if ((b.status || "").includes("취소")) return false;
+      if (isCancelledResortStatus(b.status)) return false;
       const paid = Number((b as unknown as Record<string, unknown>).paid_amount) || 0;
       if (!/영수증발행|결제완료|완료/.test(b.status || "") && paid <= 0) return false; // 영수증 발행 또는 확보(입금)된 손님만
       const at = (b.accom_type || "").toLowerCase();
@@ -205,12 +206,11 @@ export default function ResortInvoicePage() {
   }, [resort]);
 
   const loadInvoices = useCallback(async () => {
-    const { data } = await supabase.from("resort_invoices").select("*").order("period_start", { ascending: true, nullsFirst: false }).order("invoice_no", { ascending: true });
-    setInvoices((data || []) as InvRow[]);
+    try { const data = await loadActiveResortInvoices(); setInvoices(data as InvRow[]); setPreview(old=>old&&data.some(r=>r.id===old.id)?old:null); } catch(e) { setInvoices([]); setPreview(null); alert((e as Error).message); }
   }, []);
 
   useEffect(() => { if (authed) { loadBookings(); setSelBooking(""); } }, [authed, resort, loadBookings]);
-  useEffect(() => { if (authed) loadInvoices(); }, [authed, loadInvoices]);
+  useEffect(() => { if (!authed)return; loadInvoices(); const refresh=()=>{void loadInvoices();void loadBookings();}; window.addEventListener("focus",refresh); const timer=setInterval(refresh,30000);return()=>{window.removeEventListener("focus",refresh);clearInterval(timer);}; }, [authed, loadInvoices, loadBookings]);
 
   function pickBooking(id: string) {
     setSelBooking(id);
@@ -300,6 +300,7 @@ export default function ResortInvoicePage() {
   }
 
   async function generate() {
+    try { await assertActiveResortBooking({booking_id:selBooking}); } catch(e) { alert((e as Error).message); return; }
     if (!guest.trim()) { alert("Reservation Name(영문 이름)을 입력해주세요."); return; }
     if (!ps || !pe || nights <= 0) { alert("체크인/체크아웃 날짜를 확인해주세요."); return; }
     if (!roomKey) { alert("룸 타입을 선택해주세요."); return; }
@@ -415,6 +416,7 @@ ${signature}`);
   }
 
   async function sendEmail() {
+    try { if(preview)await assertActiveResortBooking(preview); } catch(e) { alert((e as Error).message); void loadInvoices(); return; }
     if (!preview) return;
     const to = emailTo.trim();
     if (!to) { alert("받는 이메일 주소를 입력해주세요."); return; }
