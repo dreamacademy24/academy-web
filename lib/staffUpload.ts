@@ -1,7 +1,7 @@
 import {createHmac, timingSafeEqual} from 'node:crypto';
 export const STAFF_FILE_LIMIT = 50 * 1024 * 1024;
 export const STAFF_FILE_COUNT = 30;
-export type UploadTicket = {id:string;author:string;scope:'task'|'comment'|'chat';context:string;bucket:string;path:string;name:string;mime:string;size:number;expires:number};
+export type UploadTicket = {id:string;author:string;scope:'task'|'comment'|'chat'|'project';context:string;bucket:string;path:string;name:string;mime:string;size:number;expires:number};
 const key=()=>process.env.STAFF_SESSION_SECRET||process.env.SUPABASE_SERVICE_ROLE_KEY!;
 export function uploadTicket(value:UploadTicket){const body=Buffer.from(JSON.stringify(value)).toString('base64url');return body+'.'+createHmac('sha256',key()).update('staff-upload:'+body).digest('base64url');}
 export function readUploadTicket(value:unknown):UploadTicket{

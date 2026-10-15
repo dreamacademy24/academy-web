@@ -1,3 +1,4 @@
+import {projectFileAccess} from '@/lib/staffProjectFiles';
 import {randomUUID} from 'node:crypto';
 import {portalDb,workspaceStaffIdentity} from '@/lib/portalAuth';
 import {commentAccess,commentPhotoPrefix} from '@/lib/staffCommentMedia';
@@ -5,6 +6,7 @@ import {chatAccess,chatError} from '@/lib/staffChat';
 import {STAFF_FILE_LIMIT,uploadTicket,readUploadTicket,imageKind,type UploadTicket} from '@/lib/staffUpload';
 export const dynamic='force-dynamic';
 async function access(req:Request,scope:string,context:string){
+ if(scope==='project')return projectFileAccess(req,context);
  if(scope==='chat'){const c=await chatAccess(req);c.checkRoom(context);return {db:c.db,author:c.actor};}
  if(scope==='comment')return commentAccess(req,context);
  const staff=await workspaceStaffIdentity(req),author=staff?.replace(/^admin-/,'');if(!author)chatError('직원 로그인이 필요합니다.',401);if(author==='jun')chatError('사용 권한이 없습니다.',403);if(scope!=='task')chatError('첨부 위치를 확인해주세요.');return {db:portalDb(),author};
@@ -20,7 +22,7 @@ export async function POST(req:Request){try{
   if(b.scope==='comment'&&!kind)chatError('댓글에는 JPG·PNG·WebP·GIF 사진을 첨부해주세요.');
   if(!kind&&!['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv','zip','hwp','hwpx','mp4','mov','mp3','m4a','heic','heif'].includes(ext||''))chatError('사진·문서·영상·압축 파일을 선택해주세요.');
   const id=randomUUID(),mime=kind?.[1]||'application/octet-stream',bucket=b.scope==='chat'?'staff-chat-private':'staff-files';
-  const path=b.scope==='chat'?author+'/'+id:b.scope==='comment'?commentPhotoPrefix(author,b.context)+id+'.'+kind![0]:'task-files/'+id+'.'+(kind?.[0]||ext);
+  const path=b.scope==='chat'?author+'/'+id:b.scope==='comment'?commentPhotoPrefix(author,b.context)+id+'.'+kind![0]:(b.scope==='project'?'project-files/':'task-files/')+id+'.'+(kind?.[0]||ext);
   const ticket:UploadTicket={id,scope:b.scope,context:String(b.context||''),author,bucket,path,name:b.name.replace(/[\r\n]/g,''),mime,size:b.size,expires:Date.now()+2*60*60*1000};
   const r=await db.storage.from(bucket).createSignedUploadUrl(path,{upsert:false});if(r.error)throw r.error;
   return Response.json({url:r.data.signedUrl,ticket:uploadTicket(ticket),mime});
@@ -39,5 +41,6 @@ export async function POST(req:Request){try{
   const result=await db.from('staff_message_files').upsert({id:t.id,room:t.context,owner:author,path:t.path,name:t.name,mime:t.mime,size:t.size},{onConflict:'id',ignoreDuplicates:true});if(result.error)throw result.error;
   return Response.json({file:{id:t.id,name:t.name,mime:t.mime,size:t.size}});
  }
+ if(t.scope==='project'){const file={id:t.id,project_id:t.context,author,name:t.name,url:bucket.getPublicUrl(t.path).data.publicUrl,type:t.mime,size:t.size,created_at:new Date().toISOString()};const saved=await db.from('app_settings').upsert({key:'project-file:'+t.id,value:file},{onConflict:'key'});if(saved.error)throw saved.error;}
  return Response.json({file:{name:t.name,url:bucket.getPublicUrl(t.path).data.publicUrl,type:t.mime,size:t.size}});
  }catch(e){const err=e as Error&{status?:number};console.error('staff upload',err.message);return Response.json({error:err.status?err.message:'파일을 저장하지 못했습니다. 다시 시도해주세요.'},{status:err.status||503});}}

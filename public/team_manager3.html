@@ -1414,6 +1414,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <script src="/staff-workspace-operations.js?v=20261012-private1"></script>
 <link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-reauth1">
 <script src="/staff-workspace-media.js?v=20261005-video1"></script>
+<script src="/staff-project-files.js?v=20261015"></script>
 <link rel="stylesheet" href="/staff-workspace-shell.css?v=20260911-reauth1">
 <link rel="stylesheet" href="/staff-chat.css?v=20260918-upload1"><script src="/staff-chat.js?v=20260918-upload1"></script>
 <link rel="stylesheet" href="/staff-mobile.css?v=20260916-1"><script src="/staff-mobile.js?v=20260916-1" defer></script>
@@ -9941,7 +9942,7 @@ function renderProjDetail(projId){
   var projFiles=[];projTasks.forEach(function(t){if(t.files&&t.files.length)t.files.forEach(function(f){projFiles.push({task:t.title,file:f});});});
   if(_projTabActive==='overview')_projTabActive='tasks';
   var tabs=[{id:'tasks',label:'📋 업무피드 ('+total+')'},{id:'thread',label:'💬 댓글'},{id:'reports',label:'📝 보고'}];
-  if(projFiles.length)tabs.push({id:'files',label:'📎 파일 ('+projFiles.length+')'});
+  tabs.push({id:'files',label:'📎 파일 ('+projFiles.length+')'});
   tabs.forEach(function(tb){
     var btn=document.createElement('button');btn.className='tab-btn pdt-btn'+(tb.id===_projTabActive?' active':'');btn.dataset.tab=tb.id;btn.textContent=tb.label;
     btn.onclick=function(){setProjTab(tb.id,projId);};tabBar.appendChild(btn);
@@ -10024,8 +10025,8 @@ function renderProjDetail(projId){
     }
   }
   _renderReportSection(0);
-  // Panel: files (unchanged logic)
-  if(projFiles.length){
+  // Panel: project files and linked task attachments
+  {
     var pFiles=document.createElement('div');pFiles.className='pdt-panel';pFiles.dataset.tab='files';pFiles.style.display=_projTabActive==='files'?'block':'none';
     var fhtml='<div style="display:flex;flex-direction:column;gap:8px">';
     projFiles.forEach(function(pf){
@@ -10034,6 +10035,7 @@ function renderProjDetail(projId){
     });
     fhtml+='</div>';
     pFiles.innerHTML=fhtml;
+    if(window.mountProjectFiles)window.mountProjectFiles(projId,pFiles);
     wrap.appendChild(pFiles);
   }
 }
