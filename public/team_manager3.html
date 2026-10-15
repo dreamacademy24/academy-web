@@ -4404,7 +4404,9 @@ var _wkEditId=null;
 try{var _svw=localStorage.getItem('tmWkView');if(_svw==='person'||_svw==='all')_wkView=_svw;}catch(e){}
 function setWkView(v){_wkView=v;try{localStorage.setItem('tmWkView',v);}catch(e){}loadWeeklyCheck();}
 function loadChecklistItems(strict){
-  return sbGet('staff_checklist_items','active=eq.true&order=sort_idx.asc,created_at.asc').then(function(rows){CHECKLIST_ITEMS=Array.isArray(rows)?rows:[];return CHECKLIST_ITEMS;}).catch(function(e){if(strict)throw e;CHECKLIST_ITEMS=[];return [];});
+  return sbGet('staff_checklist_items','active=eq.true&order=sort_idx.asc,created_at.asc').then(function(rows){CHECKLIST_ITEMS=Array.isArray(rows)?rows:[];
+    if(!CHECKLIST_ITEMS.some(function(it){return /^student_(start|end)_week$/.test(it.smart_key||'');})){_wkStudentBookings=[];return CHECKLIST_ITEMS;}
+    return _staffReadPages('bookings','select=id,reservation_no,students,booking_type,accom_type,checkin_date,checkout_date,academy_start,academy_end,accom_weeks,status&status=in.(영수증발행,결제완료,완료)&order=id.asc').then(function(bookings){_wkStudentBookings=bookings;return CHECKLIST_ITEMS;});}).catch(function(e){if(strict)throw e;CHECKLIST_ITEMS=[];return [];});
 }
 function _clAssignees(assignee){
   if(!assignee||assignee==='all')return ['all'];
@@ -4603,8 +4605,32 @@ function _cascadeSmartSubs(itemId,ymd,checked){
   return sbDel('staff_daily_check','check_date=eq.'+ymd+'&item_key=like.'+encodeURIComponent(itemId+'#')+'*');
 }
 var _wkBookingsCache=null;
+var _wkStudentBookings=[];
+function _smartStudentNames(key,occYmd,bookings){
+  function ymd(d){return d.toISOString().slice(0,10);}
+  function date(s){return String(s||'').slice(0,10);}
+  var mon=new Date(occYmd+'T12:00:00Z');mon.setUTCDate(mon.getUTCDate()-((mon.getUTCDay()+6)%7));
+  var sun=new Date(mon);sun.setUTCDate(sun.getUTCDate()+6);var lo=ymd(mon),hi=ymd(sun),out=[];
+  (bookings||[]).forEach(function(b){
+    if(['영수증발행','결제완료','완료'].indexOf(b.status)<0)return;
+    var arr=b.students;try{if(typeof arr==='string')arr=JSON.parse(arr);}catch(e){return;}if(!Array.isArray(arr))return;
+    var commute=b.booking_type==='commute'||b.accom_type==='통학형';
+    arr.forEach(function(s,i){
+      var nm=s.korName||s.name_kr||s.engName||s.name_en||s.name||'';if(!nm||nm==='-')return;
+      var start=date(s.academyStart||s.academy_start||b.academy_start),end=date(s.academyEnd||s.academy_end||b.academy_end);
+      if(!start){start=date(b.checkin_date);if(!commute&&start){var d=new Date(start+'T12:00:00Z');if(isNaN(d.getTime()))return;d.setUTCDate(d.getUTCDate()+(8-d.getUTCDay())%7);start=ymd(d);}}
+      if(!end){if(commute)end=date(b.checkout_date);else{var weeks=Number(s.academyWeeks||b.accom_weeks||0);if(start&&weeks>=1){var d=new Date(start+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+(weeks-1)*7+4);end=ymd(d);}}}
+      var when=key==='student_start_week'?start:end;
+      if(when>=lo&&when<=hi)out.push({date:when,label:when.slice(5).replace('-','/')+' '+nm+' · '+(b.reservation_no||b.id)+' / '+(i+1)});
+    });
+  });
+  out.sort(function(a,b){return a.date.localeCompare(b.date)||a.label.localeCompare(b.label);});
+  return out.map(function(x){return x.label;});
+}
+
 function _smartNames(smartKey,occYmd,bookings){
   if(!smartKey)return [];
+  if(smartKey==='student_start_week'||smartKey==='student_end_week')return _smartStudentNames(smartKey,occYmd,_wkStudentBookings);
   var occ=new Date(occYmd+'T00:00:00');var loS,hiS;
   var field=(smartKey.indexOf('checkout')===0)?'checkout_date':'checkin_date';
   function _off(n){var d=new Date(occ);d.setDate(occ.getDate()+n);return _ymdLocal(d);}
@@ -4745,7 +4771,7 @@ function openWeeklyForm(presetDow,editItem){
     '<div id="wkDowRow" style="display:flex;gap:4px;margin-bottom:12px">'+dowChips+'</div>'+
     '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px"><input type="checkbox" id="wkRecurring" checked style="width:16px;height:16px"> 매주 반복</label>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">고객 자동표시 <span style="color:#94a3b8">(선택)</span></div>'+
-    '<select id="wkSmart" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option><option value="checkin_today">오늘 체크인 고객</option><option value="checkin_week">이번주 체크인 고객</option><option value="checkout_week">이번주 체크아웃 고객</option><option value="checkin_week_jp">이번주 제이파크 체크인 고객</option><option value="checkin_week_c9">이번주 큐브나인 체크인 고객</option><option value="checkin_1w">다음주 체크인 고객</option><option value="checkin_2w">2주뒤 체크인 고객</option><option value="checkin_3w">3주뒤 체크인 고객</option><option value="checkin_4w">4주뒤 체크인 고객</option><option value="checkin_8w">8주뒤 체크인 고객 (잔금 시점)</option></select>'+
+    '<select id="wkSmart" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option><option value="student_start_week">이번주 입학 학생</option><option value="student_end_week">이번주 졸업 학생 (수료)</option><option value="checkin_today">오늘 체크인 고객</option><option value="checkin_week">이번주 체크인 고객</option><option value="checkout_week">이번주 체크아웃 고객</option><option value="checkin_week_jp">이번주 제이파크 체크인 고객</option><option value="checkin_week_c9">이번주 큐브나인 체크인 고객</option><option value="checkin_1w">다음주 체크인 고객</option><option value="checkin_2w">2주뒤 체크인 고객</option><option value="checkin_3w">3주뒤 체크인 고객</option><option value="checkin_4w">4주뒤 체크인 고객</option><option value="checkin_8w">8주뒤 체크인 고객 (잔금 시점)</option></select>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">기간 <span style="color:#94a3b8">(선택 — 이 기간에만 표시돼요)</span></div>'+
     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:12px"><input type="date" id="wkStart" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box"><span style="color:#94a3b8">~</span><input type="date" id="wkEnd" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box"></div>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">특정 예약/학생 <span style="color:#94a3b8">(선택 — 항목에 이름 칩으로 표시)</span></div>'+
