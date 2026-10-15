@@ -214,6 +214,7 @@ export default function AdminBookingsPage(){
   const [filter,setFilter]=useState("전체");
   const [listPeriod,setListPeriod]=useState<"현재"|"지난"|"전체">("현재");
   const [listSearch,setListSearch]=useState("");
+  const [checkinMonth,setCheckinMonth]=useState("");
   const [confirmFilter]=useState("전체");
   const [confirmAssignee,setConfirmAssignee]=useState("전체");
   const [confirmType,setConfirmType]=useState<"전체"|"리조트"|"통학형">("전체");
@@ -797,9 +798,10 @@ export default function AdminBookingsPage(){
   const _stBase2=filter==="취소"?_stBase:_stBase.filter(b=>!(b.agency==="다온맘"&&!(Number((b as unknown as Record<string,unknown>).paid_amount)>0)));
   const statusFiltered=_stBase2;
   const filtered=listPeriod==="현재"?statusFiltered.filter(b=>!isPast(b)):listPeriod==="지난"?statusFiltered.filter(b=>isPast(b)):statusFiltered;
-  const searchedList=filtered.filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
+  const searchedList=filtered.filter(b=>!checkinMonth||(checkinMonth==="undated"?!b.checkin_date:String(b.checkin_date||"").slice(0,7)===checkinMonth)).filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.checkin_date||"9999").localeCompare(String(y.checkin_date||"9999"))||String(x.reservation_no||"").localeCompare(String(y.reservation_no||"")));
   const pastCount=statusFiltered.filter(b=>isPast(b)).length;
   const rcpList=bookings.filter(b=>{
+    if(checkinMonth && (checkinMonth==="undated"?!!b.checkin_date:String(b.checkin_date||"").slice(0,7)!==checkinMonth))return false;
     if(!["영수증발행","완료"].includes(b.status))return false;
     // 과거 예약(체크아웃 지난) 제외 — 현재+미래만
     const co=b.checkout_date||"";
@@ -957,6 +959,16 @@ export default function AdminBookingsPage(){
     </div>
     )}
 
+    {!stuOnly&&(mainTab==="list"||mainTab==="receipt")&&<div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",margin:"12px 0"}}>
+      <label htmlFor="booking-checkin-month" style={{fontWeight:700}}>체크인 월</label>
+      <select id="booking-checkin-month" value={checkinMonth} onChange={e=>setCheckinMonth(e.target.value)} style={{padding:"9px 12px",border:"1px solid #d1d5db",borderRadius:8,background:"white",fontSize:14}}>
+        <option value="">전체 월</option>
+        {Array.from(new Set(bookings.map(b=>String(b.checkin_date||"").slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))).sort().map(m=><option key={m} value={m}>{m.slice(0,4)}년 {Number(m.slice(5))}월</option>)}
+        <option value="undated">체크인 미정</option>
+      </select>
+      <span style={{fontSize:13,color:"#64748b"}}>체크인 기준 · {mainTab==="list"?searchedList.length:rcpList.length}건</span>
+      {checkinMonth&&<button className="sub-tab" onClick={()=>setCheckinMonth("")}>전체 월 보기</button>}
+    </div>}
     <div className={stuOnly?"student-content":undefined}>
     {stuOnly&&studentMode==="detail"&&<><h2 className="student-layout-title">{stuView==="now"?"지금 다니는 학생":stuView==="list"?"전체 학생":"수업 일정"}</h2><p className="student-layout-caption">{stuView==="now"?"명단에서 학생을 선택하면 오른쪽에서 바로 확인합니다.":stuView==="list"?"필요한 항목을 모아 보고 예약과 학생케어로 연결합니다.":"학생별 수업 기간과 주간 재학 인원을 확인합니다."}</p></>}
     {/* ── 탭0: 신규 접수 예약 ── */}
