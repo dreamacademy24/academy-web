@@ -277,6 +277,18 @@ export default function OnlineClassPage() {
   }, []);
   useEffect(() => { if (tab === "targets" && targets.length === 0) loadTargets(); }, [tab, targets.length, loadTargets]);
 
+  const [memoDrafts, setMemoDrafts] = useState<Record<string,string>>({});
+  const [memoStates, setMemoStates] = useState<Record<string,string>>({});
+  async function saveTargetMemo(key: string) {
+    const memo = memoDrafts[key] ?? targets.find(t=>t.key===key)?.contact_memo ?? "";
+    setMemoStates(prev=>({...prev,[key]:"저장 중"}));
+    try {
+      const res=await fetch("/api/online-class/targets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"memo",key,memo})});
+      if(!res.ok) throw new Error("저장 실패");
+      setTargets(prev=>prev.map(t=>t.key===key?{...t,contact_memo:memo}:t));
+      setMemoStates(prev=>({...prev,[key]:"저장됨"}));
+    } catch { setMemoStates(prev=>({...prev,[key]:"저장 실패 · 다시 시도해주세요"})); }
+  }
   async function toggleTarget(key: string, excluded: boolean) {
     const res = await fetch("/api/online-class/targets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: excluded ? "restore" : "exclude", key }) });
     if (res.ok) setTargets(prev => prev.map(t => t.key === key ? { ...t, excluded: !excluded } : t));
@@ -916,7 +928,7 @@ export default function OnlineClassPage() {
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 860 }}>
                 <thead><tr style={{ color: "#6b7c93", fontSize: 12, textAlign: "left" }}>
-                  {["학생", "출생", "예약자", "하우스", "체류기간", "화상영어", "액션"].map(h => <th key={h} style={{ padding: "9px 12px", borderBottom: "1px solid #eef2f7", whiteSpace: "nowrap" }}>{h}</th>)}
+                  {["학생", "출생", "예약자", "하우스", "체류기간", "화상영어", "연락 메모", "액션"].map(h => <th key={h} style={{ padding: "9px 12px", borderBottom: "1px solid #eef2f7", whiteSpace: "nowrap" }}>{h}</th>)}
                 </tr></thead>
                 <tbody>
                   {visible.map(t => (
@@ -931,7 +943,14 @@ export default function OnlineClassPage() {
                           : t.enrolled === "past" ? <span style={{ fontSize: 11, fontWeight: 700, background: "#f1f5f9", color: "#64748b", padding: "2px 8px", borderRadius: 8 }}>이력 있음</span>
                           : <span style={{ color: "#cbd5e1" }}>—</span>}
                       </td>
-                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                                              <td style={{padding:"10px 12px",minWidth:240}}>
+                          <textarea aria-label={t.name_kr+" 연락 메모"} value={memoDrafts[t.key]??t.contact_memo??""} maxLength={1000} rows={2} disabled={memoStates[t.key]==="저장 중"} placeholder="예: 미연락 / 10/15 어머니 연락 완료"
+                            onChange={e=>{setMemoDrafts(prev=>({...prev,[t.key]:e.target.value}));setMemoStates(prev=>({...prev,[t.key]:"미저장"}));}}
+                            style={{width:"100%",minWidth:220,boxSizing:"border-box",padding:7,border:"1px solid #dbe2ec",borderRadius:7,fontFamily:"inherit",fontSize:12,resize:"vertical"}} />
+                          <button onClick={()=>saveTargetMemo(t.key)} disabled={memoStates[t.key]==="저장 중"} style={{padding:"3px 9px",border:"1px solid #cbd5e1",borderRadius:6,background:"white",cursor:"pointer"}}>저장</button>
+                          <span role="status" style={{marginLeft:6,fontSize:11,color:memoStates[t.key]?.startsWith("저장 실패")?"#dc2626":"#64748b"}}>{memoStates[t.key]}</span>
+                        </td>
+<td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
                         <button onClick={() => registerFromTarget(t)} style={{ border: "1px solid #93c5fd", background: "#eff6ff", color: "#1d4ed8", borderRadius: 8, padding: "5px 11px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", marginRight: 6 }}>➕ 수강 등록</button>
                         <button onClick={() => toggleTarget(t.key, t.excluded)} style={{ border: "1px solid " + (t.excluded ? "#bbf7d0" : "#fecaca"), background: "#fff", color: t.excluded ? "#166534" : "#dc2626", borderRadius: 8, padding: "5px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{t.excluded ? "↩ 복구" : "🗑 제외"}</button>
                       </td>

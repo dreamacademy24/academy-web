@@ -1,3 +1,4 @@
+import { workspaceStaffIdentity } from '@/lib/portalAuth'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
@@ -11,7 +12,15 @@ const supabase = createClient(
 const EXCL_KEY = 'oc_targets_excluded'
 
 // GET: 올해 다녀간(체크인 기준) 아이 전체 — 화상영어 등록 대상 목록
-export async function GET() {
+export async function GET(req: Request) {
+  if(!await workspaceStaffIdentity(req)) return NextResponse.json({error:'직원 로그인이 필요합니다.'},{status:401})
+  const memoMap = new Map<string,string>()
+  for(let offset=0;;offset+=500){
+    const {data,error}=await supabase.from('online_target_memos').select('target_key,memo').order('target_key').range(offset,offset+499)
+    if(error)return NextResponse.json({error:'메모를 불러오지 못했습니다.'},{status:500})
+    for(const row of data||[])memoMap.set(row.target_key,row.memo)
+    if(!data||data.length<500)break
+  }
   const year = new Date(Date.now() + 8 * 3600 * 1000).getFullYear()
   const { data: bks, error } = await supabase.from('bookings')
     .select('id, booker_name, checkin_date, checkout_date, house_no, accom_room, accom_type, students, portal_user_id, status')
@@ -50,6 +59,7 @@ export async function GET() {
         portal_user_id: b.portal_user_id || null,
         enrolled: enrolledActive.has(name) ? 'active' : enrolledEver.has(name) ? 'past' : null,
         excluded: exSet.has(key),
+        contact_memo: memoMap.get(key) || '',
       })
     }
   }
@@ -58,7 +68,17 @@ export async function GET() {
 
 // POST: { action: 'exclude'|'restore', key }
 export async function POST(req: Request) {
-  const { action, key } = await req.json()
+  const author=await workspaceStaffIdentity(req)
+  if(!author)return NextResponse.json({error:'직원 로그인이 필요합니다.'},{status:401})
+  const body=await req.json().catch(()=>null)
+  if(!body)return NextResponse.json({error:'bad request'},{status:400})
+  const {action,key,memo}=body
+  if(action==='memo'){
+    if(typeof key!=='string'||key.length>300||!key.includes('|')||typeof memo!=='string'||memo.length>1000)return NextResponse.json({error:'메모는 1000자 이내로 입력해주세요.'},{status:400})
+    const {error}=await supabase.from('online_target_memos').upsert({target_key:key,memo,updated_by:author,updated_at:new Date().toISOString()},{onConflict:'target_key'})
+    if(error)return NextResponse.json({error:'메모 저장에 실패했습니다.'},{status:500})
+    return NextResponse.json({ok:true})
+  }
   if (!key || !['exclude', 'restore'].includes(action)) return NextResponse.json({ error: 'bad request' }, { status: 400 })
   const { data: ex } = await supabase.from('app_settings').select('value').eq('key', EXCL_KEY).maybeSingle()
   let list: string[] = Array.isArray(ex?.value) ? ex!.value : []
