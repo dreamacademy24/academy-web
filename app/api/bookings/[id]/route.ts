@@ -93,6 +93,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const body = await req.json()
+  const currentNew = await supabase.from('bookings_new').select('*').eq('id', id).maybeSingle()
+  const current = currentNew.data || (await supabase.from('bookings').select('*').eq('id', id).maybeSingle()).data
+  if (!current) return NextResponse.json({error:'not found'},{status:404})
+  const commute = (body.booking_type ?? current.booking_type) === 'commute' || (body.accom_type ?? current.accom_type) === '통학형'
+  const scheduleChanged = ['checkin_date','checkout_date','academy_start','academy_end'].some(k => body[k] !== undefined && body[k] !== current[k])
+  if (commute && scheduleChanged) {
+    const start = body.checkin_date ?? body.academy_start ?? current.academy_start ?? current.checkin_date
+    const end = body.checkout_date ?? body.academy_end ?? current.academy_end ?? current.checkout_date
+    const valid = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && Number.isFinite(Date.parse(v)) && new Date(v).toISOString().slice(0,10) === v
+    if (!valid(start) || !valid(end) || end < start) return NextResponse.json({error:'수업 시작일과 종료일을 확인해주세요. 종료일은 시작일 이후여야 합니다.'},{status:400})
+    Object.assign(body,{checkin_date:start,checkout_date:end,academy_start:start,academy_end:end,accom_weeks:Math.ceil((Date.parse(end)-Date.parse(start)+86400000)/604800000)})
+  }
   if (['portal_user_id','portal_username','portal_temp_pw'].some(key => Object.prototype.hasOwnProperty.call(body,key))) {
     if (!(await workspaceStaffIdentity(req))) return NextResponse.json({error:'직원 로그인 후 연결해주세요.'},{status:403});
     if (!Object.prototype.hasOwnProperty.call(body,'portal_user_id')) return NextResponse.json({error:'계정 연결 또는 비밀번호 재설정 기능을 이용해주세요.'},{status:400});
@@ -115,7 +127,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!body.accom_type.includes('드림하우스')) { body.dh_weeks = null }
   }
   // bookings_new 우선, 없으면 bookings (live 테이블)
-  const newRow = await supabase.from('bookings_new').update(body).eq('id', id).select().maybeSingle()
+  const newRow = currentNew.data ? await supabase.from('bookings_new').update(body).eq('id', id).select().maybeSingle() : {data:null,error:null}
+  if (newRow.error) return NextResponse.json({error:newRow.error.message},{status:400})
   let updatedBooking: Record<string, unknown> | null = null
   let source: 'new' | 'old' = 'new'
   if (newRow.data) {
@@ -136,7 +149,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.academy_end !== undefined) stuPatch.academy_end = body.academy_end
     if (Object.keys(stuPatch).length > 0) {
       const stuRes = await supabase.from('students').update(stuPatch).eq('booking_id', id).select()
-      console.log('[PATCH /api/bookings] students sync:', { booking_id: id, patch: stuPatch, rows: stuRes.data?.length ?? 0, error: stuRes.error?.message })
+      if (stuRes.error) return NextResponse.json({error:'예약은 저장됐지만 학생 일정 동기화에 실패했습니다. 다시 저장해주세요: '+stuRes.error.message},{status:500})
     }
 
     // 2) bookings.students JSONB (camelCase) — 학생관리 달력은 이쪽을 source로 읽음
@@ -156,15 +169,31 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           next.academyEnd = body.academy_end
           next.academy_end = body.academy_end
         }
+        if (commute && scheduleChanged) next.academyWeeks = String(body.accom_weeks)
         return next
       })
       const tbl = source === 'new' ? 'bookings_new' : 'bookings'
       const jsonbRes = await supabase.from(tbl).update({ students: patched }).eq('id', id).select().maybeSingle()
-      console.log('[PATCH /api/bookings] JSONB sync:', { table: tbl, items: patched.length, error: jsonbRes.error?.message })
+      if (jsonbRes.error) return NextResponse.json({error:'학생 명단 동기화에 실패했습니다. 다시 저장해주세요: '+jsonbRes.error.message},{status:500})
       if (jsonbRes.data) updatedBooking = jsonbRes.data
     }
   }
 
+  if (commute && (body.academy_start !== undefined || body.academy_end !== undefined)) {
+    const snapshot = await supabase.from('invoice_snapshots').select('saved_data').eq('booking_id',id).maybeSingle()
+    if (snapshot.error) return NextResponse.json({error:'인보이스 일정 조회 실패: '+snapshot.error.message},{status:500})
+    if (snapshot.data?.saved_data) {
+      const saved = snapshot.data.saved_data
+      const next = {...saved,students:Array.isArray(saved.students)?saved.students.map((s:Record<string,unknown>)=>({
+        ...s,
+        ...(body.academy_start !== undefined ? {academyStart:body.academy_start,academy_start:body.academy_start}:{}),
+        ...(body.academy_end !== undefined ? {academyEnd:body.academy_end,academy_end:body.academy_end}:{}),
+        ...(scheduleChanged ? {academyWeeks:String(body.accom_weeks)}:{})
+      })):saved.students}
+      const sync = await supabase.from('invoice_snapshots').update({saved_data:next}).eq('booking_id',id)
+      if (sync.error) return NextResponse.json({error:'인보이스 일정 동기화 실패: '+sync.error.message},{status:500})
+    }
+  }
   return NextResponse.json({ booking: updatedBooking, source })
 }
 

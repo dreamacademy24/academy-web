@@ -146,10 +146,13 @@ export default function BookingDetailPage() {
   }
 
   const load = useCallback(async () => {
-    setLoading(true);
-    const res = await fetch(`/api/bookings/${id}`);
-    if (res.ok) setData(await res.json());
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/bookings/${id}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("예약을 불러오지 못했습니다.");
+      setData(await res.json());
+    } catch (error) {
+      toastErr(error instanceof Error ? error.message : "연결을 확인한 뒤 다시 시도해주세요.");
+    } finally { setLoading(false); }
   }, [id]);
 
   // booking 로드 시 올인원/포털 state 세팅
@@ -252,6 +255,7 @@ export default function BookingDetailPage() {
       checkout_date: b.check_out || b.checkout_date || "",
       accom_weeks: String(b.accom_weeks || ""),
       accom_type: b.accom_type || "",
+      booking_type: b.booking_type || "",
       agency: b.agency || "",
       flight_in: b.flight_in || "",
       flight_out: b.flight_out || "",
@@ -362,6 +366,7 @@ export default function BookingDetailPage() {
   async function saveRowEdit() {
     if (!rowEditing) return;
     setRowSaving(true);
+    try {
     const fieldsByTable: Record<string, string[]> = {
       students: ["name_kr","name_en","age","level","class_type","academy_start","academy_end","ssp","photo_allowed","pickup_location","address_detail","special_request"],
       pickup_requests: ["request_type","request_date","request_time","location","destination","num_people","notes","status","ticket_url"],
@@ -432,11 +437,16 @@ export default function BookingDetailPage() {
     }
     setRowSaving(false);
     setRowEditing(null);
-    load();
+    await load();
+    } catch (error) {
+      toastErr(error instanceof Error ? error.message : "저장 중 연결 오류가 발생했습니다. 입력 내용은 유지됩니다.");
+    } finally { setRowSaving(false); }
   }
 
   async function saveEdit() {
+    if (saving) return;
     setSaving(true);
+    try {
     const payload: Record<string, any> = {
       booker_name: (editForm.booker_name || "").trim() || null,
       booker_phone: (editForm.booker_phone || "").trim() || null,
@@ -486,56 +496,29 @@ export default function BookingDetailPage() {
       })(),
       updated_at: new Date().toISOString(),
     };
+    const original = data?.booking || {};
+    const datesChanged = editForm.checkin_date !== (original.check_in || original.checkin_date || "")
+      || editForm.checkout_date !== (original.check_out || original.checkout_date || "")
+      || editForm.academy_start !== (original.academy_start || deriveAcademyStart(original.check_in || original.checkin_date) || "")
+      || Number(editForm.accom_weeks) !== Number(original.accom_weeks);
+    if (!datesChanged) { delete payload.academy_start; delete payload.academy_end; }
+    if (isCommuteBooking(editForm) && datesChanged) payload.academy_start = editForm.checkin_date || null;
     const res = await fetch(`/api/bookings/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    setSaving(false);
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
       toastErr("저장 실패: " + (j.error || "알 수 없는 오류"));
       return;
     }
-    // 학생 academy 날짜 동기화: 예약의 academy_start/academy_end(기간) 변경 시 연결 학생도 함께 갱신.
-    // 학생관리 리스트/달력은 bookings.students JSONB의 academyEnd를 읽으므로, 이 동기화가 없으면
-    // 예약 상세 값과 학생 값이 어긋나 "날짜 불일치" 경고가 발생함.
-    const syncStart = (payload.academy_start as string) || "";
-    const syncEnd = (payload.academy_end as string) || "";
-    if (syncStart || syncEnd) {
-      const studs = ((data as any)?.students || []) as any[];
-      if (studs.length > 0) {
-        // 1) JSONB 동기화 (연결된 모든 학생) — 학생관리가 읽는 유일/주 소스
-        const arr = studs.map((s) => ({
-          ...s,
-          academy_start: syncStart || s.academy_start || s.academyStart || "",
-          academy_end:   syncEnd   || s.academy_end   || s.academyEnd   || "",
-          academyStart:  syncStart || s.academyStart || s.academy_start || "",
-          academyEnd:    syncEnd   || s.academyEnd   || s.academy_end   || "",
-        }));
-        const sres = await fetch(`/api/bookings/${id}/update-row`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentsJsonb: arr }),
-        });
-        if (!sres.ok) {
-          const j = await sres.json().catch(() => ({}));
-          toastErr("학생 날짜 동기화 실패: " + (j.error || "알 수 없는 오류"));
-        }
-        // 2) students 테이블 DB row 동기화 (UUID 있는 학생만, booking_id는 API에서 검증)
-        for (const s of studs) {
-          const rid = s.id && /^[0-9a-f-]{36}$/i.test(String(s.id)) ? s.id : null;
-          if (!rid) continue;
-          await fetch(`/api/bookings/${id}/update-row`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ table: "students", rowId: rid, fields: { academy_start: syncStart || null, academy_end: syncEnd || null } }),
-          }).catch(() => {});
-        }
-      }
-    }
+    await load();
     setEditing(false);
-    load();
+    toastOk("예약 일정이 저장되었습니다.");
+    } catch (error) {
+      toastErr(error instanceof Error ? error.message : "저장 중 연결 오류가 발생했습니다. 입력 내용은 유지됩니다.");
+    } finally { setSaving(false); }
   }
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
@@ -788,23 +771,23 @@ export default function BookingDetailPage() {
             {isCommuteBooking(b) ? (<>
               <div className="item"><div className="lbl">수업시작</div>
                 {editing
-                  ? <input className="ed-inp" type="date" value={editForm.checkin_date||""} onChange={e=>setEditForm({...editForm,checkin_date:e.target.value})}/>
+                  ? <input className="ed-inp" type="date" value={editForm.checkin_date||""} onInput={e=>{const value=e.currentTarget.value;setEditForm(p=>({...p,checkin_date:value}));}} onChange={e=>{const value=e.target.value;setEditForm(p=>({...p,checkin_date:value}));}}/>
                   : <div className="val">{fDate(b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date))}</div>}
               </div>
               <div className="item"><div className="lbl">수업종료</div>
                 {editing
-                  ? <input className="ed-inp" type="date" value={editForm.checkout_date||""} onChange={e=>setEditForm({...editForm,checkout_date:e.target.value})}/>
+                  ? <input className="ed-inp" type="date" value={editForm.checkout_date||""} onInput={e=>{const value=e.currentTarget.value;setEditForm(p=>({...p,checkout_date:value}));}} onChange={e=>{const value=e.target.value;setEditForm(p=>({...p,checkout_date:value}));}}/>
                   : <div className="val">{fDate(b.checkout_date || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div>}
               </div>
             </>) : (<>
               <div className="item"><div className="lbl">체크인</div>
                 {editing
-                  ? <input className="ed-inp" type="date" value={editForm.checkin_date||""} onChange={e=>setEditForm({...editForm,checkin_date:e.target.value})}/>
+                  ? <input className="ed-inp" type="date" value={editForm.checkin_date||""} onInput={e=>{const value=e.currentTarget.value;setEditForm(p=>({...p,checkin_date:value}));}} onChange={e=>{const value=e.target.value;setEditForm(p=>({...p,checkin_date:value}));}}/>
                   : <div className="val">{(b.check_in||b.checkin_date)?<>{fDate(b.check_in||b.checkin_date)} <span style={{color:"#64748b",fontSize:12}}>15:00PM</span></>:"-"}</div>}
               </div>
               <div className="item"><div className="lbl">체크아웃</div>
                 {editing
-                  ? <input className="ed-inp" type="date" value={editForm.checkout_date||""} onChange={e=>setEditForm({...editForm,checkout_date:e.target.value})}/>
+                  ? <input className="ed-inp" type="date" value={editForm.checkout_date||""} onInput={e=>{const value=e.currentTarget.value;setEditForm(p=>({...p,checkout_date:value}));}} onChange={e=>{const value=e.target.value;setEditForm(p=>({...p,checkout_date:value}));}}/>
                   : <div className="val">{(b.check_out||b.checkout_date)?<>{fDate(b.check_out||b.checkout_date)} <span style={{color:"#64748b",fontSize:12}}>{b.late_checkout?"22:30pm":"12noon"}</span></>:"-"}</div>}
               </div>
               <div className="item"><div className="lbl">Late Check-out</div>
