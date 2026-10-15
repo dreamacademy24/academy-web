@@ -4558,8 +4558,22 @@ function loadWeeklyCheck(){
   }).catch(function(e){if(CU!==actor||document.getElementById('weeklyCheckSection')!==sec||sec._weeklyRequest!==token)return;sec.innerHTML='<div class="swo-status" role="alert">주간 업무 또는 고객 정보를 불러오지 못했습니다. 미완료로 표시하지 않습니다.<button class="tm-btn" onclick="loadWeeklyCheck()">다시 불러오기</button></div>';});
 }
 // ── 스마트 고객 하위 체크리스트: 고객별 체크(staff_daily_check item_key = 항목id#고객명). 전부 체크되면 상위 자동 체크, 하나라도 풀리면 상위 해제
+function _jpPrepareHtml(itemId,ymd,names,checkSet){
+  var groups={},done=0;
+  names.forEach(function(name){var cut=name.lastIndexOf(' · '),customer=name.slice(0,cut);(groups[customer]||(groups[customer]=[])).push({key:name,label:name.slice(cut+3)});});
+  var h='<div style="display:grid;gap:12px;margin-top:8px">';
+  Object.keys(groups).forEach(function(customer){
+    h+='<section style="padding:12px 16px;background:white;border:1px solid #e2e8f0;border-radius:9px"><div style="font-weight:700;margin-bottom:8px">'+esc(customer)+'</div><div style="display:grid;gap:8px">';
+    groups[customer].forEach(function(part){var checked=!!checkSet[ymd+'|'+_subKey(itemId,part.key)];if(checked)done++;
+      var args=[itemId,ymd,part.key,names].map(function(v){return JSON.stringify(v);}).join(',');
+      var handler=('toggleSmartSub('+args+',this)').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+      h+='<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:'+(checked?'#15803d':'#334155')+'"><input type="checkbox" '+(checked?'checked':'')+' onchange="'+handler+'" style="width:16px;height:16px;accent-color:#16a34a">'+esc(part.label)+'</label>';
+    });h+='</div></section>';
+  });return h+'<span style="font-size:12px;color:#64748b">준비 완료 '+done+' / '+names.length+'</span></div>';
+}
 function _subKey(itemId,name){return itemId+'#'+name;}
 function _smartSubsHtml(itemId,ymd,names,checkSet,opt){
+  if(names.length&&CHECKLIST_ITEMS.some(function(it){return it.id===itemId&&it.smart_key==='checkin_week_jp_prepare';}))return _jpPrepareHtml(itemId,ymd,names,checkSet);
   opt=opt||{};var ml=opt.ml||'24px';var fs=opt.fs||'11px';
   if(!names.length)return '<div style="margin-left:'+ml+';margin-top:4px;margin-bottom:6px;font-size:10.5px;color:#94a3b8">해당 고객 없음</div>';
   var done=0;var h='<div style="margin-left:'+ml+';margin-top:4px;margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px 10px">';
@@ -4631,6 +4645,7 @@ function _smartStudentNames(key,occYmd,bookings){
 
 function _smartNames(smartKey,occYmd,bookings){
   if(!smartKey)return [];
+  if(smartKey==='checkin_week_jp_prepare')return _smartNames('checkin_week_jp',occYmd,bookings).flatMap(function(name){return ['여권','상비약','제이파크 안내문','체크인 인보이스','예약에 맞는 웰컴팩','빨래 종이'].map(function(part){return name+' · '+part;});});
   if(smartKey==='student_start_week'||smartKey==='student_end_week')return _smartStudentNames(smartKey,occYmd,_wkStudentBookings);
   var occ=new Date(occYmd+'T00:00:00');var loS,hiS;
   var field=(smartKey.indexOf('checkout')===0)?'checkout_date':'checkin_date';
@@ -4772,7 +4787,7 @@ function openWeeklyForm(presetDow,editItem){
     '<div id="wkDowRow" style="display:flex;gap:4px;margin-bottom:12px">'+dowChips+'</div>'+
     '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px"><input type="checkbox" id="wkRecurring" checked style="width:16px;height:16px"> 매주 반복</label>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">고객 자동표시 <span style="color:#94a3b8">(선택)</span></div>'+
-    '<select id="wkSmart" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option><option value="student_start_week">이번주 입학 학생</option><option value="student_end_week">이번주 졸업 학생 (수료)</option><option value="checkin_today">오늘 체크인 고객</option><option value="checkin_week">이번주 체크인 고객</option><option value="checkout_week">이번주 체크아웃 고객</option><option value="checkin_week_jp">이번주 제이파크 체크인 고객</option><option value="checkin_week_c9">이번주 큐브나인 체크인 고객</option><option value="checkin_1w">다음주 체크인 고객</option><option value="checkin_2w">2주뒤 체크인 고객</option><option value="checkin_3w">3주뒤 체크인 고객</option><option value="checkin_4w">4주뒤 체크인 고객</option><option value="checkin_8w">8주뒤 체크인 고객 (잔금 시점)</option></select>'+
+    '<select id="wkSmart" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option><option value="student_start_week">이번주 입학 학생</option><option value="student_end_week">이번주 졸업 학생 (수료)</option><option value="checkin_today">오늘 체크인 고객</option><option value="checkin_week">이번주 체크인 고객</option><option value="checkout_week">이번주 체크아웃 고객</option><option value="checkin_week_jp">이번주 제이파크 체크인 고객</option><option value="checkin_week_jp_prepare">이번주 제이파크 체크인 준비 (고객별 6개 항목)</option><option value="checkin_week_c9">이번주 큐브나인 체크인 고객</option><option value="checkin_1w">다음주 체크인 고객</option><option value="checkin_2w">2주뒤 체크인 고객</option><option value="checkin_3w">3주뒤 체크인 고객</option><option value="checkin_4w">4주뒤 체크인 고객</option><option value="checkin_8w">8주뒤 체크인 고객 (잔금 시점)</option></select>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">기간 <span style="color:#94a3b8">(선택 — 이 기간에만 표시돼요)</span></div>'+
     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:12px"><input type="date" id="wkStart" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box"><span style="color:#94a3b8">~</span><input type="date" id="wkEnd" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box"></div>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">특정 예약/학생 <span style="color:#94a3b8">(선택 — 항목에 이름 칩으로 표시)</span></div>'+
