@@ -130,6 +130,7 @@ export default function ResortInvoicePage() {
   const [emailModal, setEmailModal] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailCc, setEmailCc] = useState("");
+  const [senderEmail, setSenderEmail] = useState("");
   const [attachImg, setAttachImg] = useState<string>(""); // 첨부될 인보이스 PNG 미리보기
   const [extraFiles, setExtraFiles] = useState<{ name: string; dataUrl: string; isDefault?: boolean }[]>([]);
   const [emailBody, setEmailBody] = useState("");
@@ -151,10 +152,10 @@ export default function ResortInvoicePage() {
   // 큐브나인 수신처 자동 입력: 담당자 2곳 동시 발송 (2026-07-30 메이 지정)
   useEffect(() => {
     if (!preview || preview.resort !== "cubenine") return;
-    const C9_TO = "kimkimsky123@naver.com, cube9resort@gmail.com";
+    const C9_TO = "cube9resort@gmail.com";
     let saved = "";
     try { saved = localStorage.getItem("resortEmail_cubenine") || ""; } catch {}
-    if (saved && saved.includes("kimkimsky123") && saved.includes("cube9resort")) return; // 이미 최신 주소면 유지
+    
     setEmailTo(C9_TO);
   }, [preview]);
 
@@ -369,6 +370,10 @@ export default function ResortInvoicePage() {
   async function openEmailModal() {
     if (!preview) return;
     const info = getAdminInfo();
+    let mailConfig;
+    try { const response = await fetch("/api/resort-invoice/email", {cache:"no-store"}); mailConfig = await response.json(); if (!response.ok) throw Error(mailConfig.error); } catch(e) { alert("메일 설정 확인 실패: " + (e as Error).message); return; }
+    setSenderEmail(mailConfig.senderEmail || "");
+    if (preview.resort === "cubenine") setEmailTo("cube9resort@gmail.com");
     const staff = info?.name || "Dream Company Staff";
     let signature = `Best regards,\n${staff}\nDream Company (Dream Academy)`;
     try {
@@ -403,6 +408,7 @@ ${signature}`);
         setEmailCc(noB || "deskor112@gmail.com");
       }
     } catch { setEmailCc("deskor112@gmail.com"); }
+    if (preview.resort === "cubenine") setEmailCc("kimkimsky123@naver.com, deskor112@gmail.com");
     setAttachImg("");
     setEmailModal(true);
     // 첨부될 인보이스 이미지를 미리 만들어 우측에 보여줌 (발송 시 이 이미지가 그대로 첨부됨)
@@ -418,6 +424,7 @@ ${signature}`);
   async function sendEmail() {
     try { if(preview)await assertActiveResortBooking(preview); } catch(e) { alert((e as Error).message); void loadInvoices(); return; }
     if (!preview) return;
+    if (preview.resort === "cubenine" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderEmail.trim())) { alert("발송 직원의 참조 이메일을 입력해주세요."); return; }
     const to = emailTo.trim();
     if (!to) { alert("받는 이메일 주소를 입력해주세요."); return; }
     setSending(true);
@@ -433,7 +440,7 @@ ${signature}`);
       const r = await fetch("/api/resort-invoice/email", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to, cc: cc || undefined,
+          to, cc: cc || undefined, resort: preview.resort, senderEmail,
           subject: emailSubject.trim() || `[Dream Company] Invoice ${preview.invoice_no}`,
           text: emailBody,
           imageBase64: img, filename: `invoice_${preview.invoice_no}.png`,
@@ -674,11 +681,12 @@ ${signature}`);
               <input className="fi" value={emailTo} onChange={e => setEmailTo(e.target.value)} />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <span className="fl">참조 (CC) — 항상 내 메일이 기본으로 들어갑니다</span>
+              <span className="fl">참조 (CC) — 큐브나인은 담당자·대표님·발송 직원 자동 포함</span>
               <input className="fi" value={emailCc} onChange={e => setEmailCc(e.target.value)} placeholder="deskor112@gmail.com" />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <span className="fl">제목</span>
+              {preview.resort === "cubenine" && <div style={{marginBottom:12}}><span className="fl">발송 직원 참조 이메일 (다음 발송에도 자동 적용)</span><input className="fi" type="email" value={senderEmail} onChange={e=>setSenderEmail(e.target.value)} placeholder="본인 이메일" /><small>발신은 회사 메일입니다. 이 주소는 참조에 추가됩니다.</small></div>}
+                <span className="fl">제목</span>
               <input className="fi" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} />
             </div>
             <div>

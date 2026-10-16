@@ -1,11 +1,35 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import {portalDb, workspaceStaffIdentity} from "@/lib/portalAuth";
+const validEmail = (v:string) => /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(v);
+export async function GET(req:Request) {
+ const username=await workspaceStaffIdentity(req);
+ if(!username)return NextResponse.json({error:"직원 로그인이 필요합니다."},{status:401});
+ const db=portalDb();
+ const [settings,staff]=await Promise.all([db.from("app_settings").select("value").eq("key","resort_sender_email:"+username).maybeSingle(),db.from("staff_accounts").select("signature").eq("username",username).maybeSingle()]);
+ if(settings.error||staff.error)return NextResponse.json({error:"직원 이메일 조회 실패"},{status:500});
+ const senderEmail=String(settings.data?.value?.email || staff.data?.signature?.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || (username==="admin-ceo"?"deskor112@gmail.com":""));
+ return NextResponse.json({senderEmail},{headers:{"Cache-Control":"no-store"}});
+}
 
 // 리조트 인보이스 이메일 발송 (이미지 첨부)
 // 환경변수: MAIL_USER / MAIL_PASS (Namecheap Private Email, 예: admin@dreamacademyph.com)
 export async function POST(req: Request) {
   try {
-    const { to, cc, subject, text, imageBase64, filename, extraAttachments } = await req.json();
+    const username=await workspaceStaffIdentity(req);
+    if(!username)return NextResponse.json({error:"직원 로그인이 필요합니다."},{status:401});
+    const { to, cc, subject, text, imageBase64, filename, extraAttachments, resort, senderEmail } = await req.json();
+    const isCube=resort === "cubenine" || String(to).toLowerCase().includes("cube9resort@gmail.com");
+    let finalTo=to, finalCc=cc;
+    if(isCube){
+      const employee=String(senderEmail||"").trim();
+      if(!validEmail(employee))return NextResponse.json({error:"발송 직원의 참조 이메일이 필요합니다."},{status:400});
+      const copies=["kimkimsky123@naver.com","deskor112@gmail.com",employee,...String(cc||"").split(/[,;]/).map(s=>s.trim()).filter(Boolean)];
+      if(copies.some(v=>!validEmail(v)))return NextResponse.json({error:"참조 이메일 형식을 확인해주세요."},{status:400});
+      finalTo="cube9resort@gmail.com"; finalCc=[...new Set(copies.map(v=>v.toLowerCase()))].filter(v=>v!==finalTo).join(", ");
+      const saved=await portalDb().from("app_settings").upsert({key:"resort_sender_email:"+username,value:{email:employee}},{onConflict:"key"});
+      if(saved.error)return NextResponse.json({error:"직원 이메일 저장 실패"},{status:500});
+    }
     const user = process.env.MAIL_USER;
     const pass = process.env.MAIL_PASS;
     if (!user || !pass) {
@@ -41,8 +65,8 @@ export async function POST(req: Request) {
 
     await transporter.sendMail({
       from: `Dream Company <${user}>`,
-      to,
-      cc: cc || undefined,
+      to: finalTo,
+      cc: finalCc || undefined,
       subject: subject || "Invoice from Dream Company",
       text: text || "Please find the attached invoice.",
       attachments,
