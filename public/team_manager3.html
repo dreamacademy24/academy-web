@@ -1411,6 +1411,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <link rel="stylesheet" href="/staff-workspace-task.css?v=20260930-links1">
 <script src="/staff-upload.js?v=20260918-1"></script><script src="/staff-comment-photos.js?v=20260918-1"></script><script src="/staff-comment-threads.js?v=20260926-1"></script><script src="/staff-workspace-task.js?v=20261012-private1"></script><script defer src="/staff-links.js?v=20260930-1"></script><script defer src="/staff-limited-home.js?v=20260930-1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
+<link rel="stylesheet" href="/staff-personal-checklists.css?v=20261027-1">
+<script src="/staff-personal-checklists.js?v=20261027-1"></script>
 <script src="/staff-workspace-operations.js?v=20261012-private1"></script>
 <link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-reauth1">
 <script src="/staff-workspace-media.js?v=20261005-video1"></script>
@@ -4450,8 +4452,8 @@ function loadDailyCheck(targetId){
   }).catch(function(e){console.error('daily load err',e);sec.innerHTML='<div style="padding:16px;color:#b91c1c">체크 기록을 불러오지 못했습니다. <button onclick="loadDailyCheck()">다시 불러오기</button></div>';});
 }
 function _dailyCheckHtml(byKey,today,bookings,empId){
-  var staffDaily=CHECKLIST_ITEMS.filter(function(it){return it.kind==='daily';});
-  var seeded=staffDaily.length>0;
+  var staffDaily=CHECKLIST_ITEMS.filter(function(it){return it.kind==='daily'&&_wkPeriodOk(it,today);});
+  var seeded=CHECKLIST_ITEMS.some(function(it){return it.kind==='daily';});
   var allItems=seeded
     ? staffDaily.map(function(it){return {key:it.id,label:it.content,assignee:it.assignee,fixed:false,id:it.id};})
     : DAILY_ITEMS.map(function(it){return {key:it.key,label:it.label,assignee:'all',fixed:true};});
@@ -4608,6 +4610,7 @@ function toggleSmartSub(itemId,ymd,name,names,el){
     if(typeof loadWeeklyCheck==='function')loadWeeklyCheck();
     if(typeof loadDailyCheck==='function')loadDailyCheck();
     if(typeof curEmpId!=='undefined'&&curEmpId&&typeof _renderEmpChecklist==='function')_renderEmpChecklist(curEmpId);
+    if(document.querySelector('.pc-calendar'))_pcRenderCalendar(curEmpId);
   }).catch(function(e){console.error('smart sub err',e);el.checked=!requestedChecked;toast('체크 저장에 실패했습니다. 다시 시도해주세요.','#dc2626');})
     .finally(function(){el.disabled=false;});
 }
@@ -7461,7 +7464,7 @@ window._clEditItems=function(){
       window._stuClItems=items;_stuRender();
     });
 };
-function renderEmpCalendarTab(empId){return _staffPersonalCalendar(empId);}
+function renderEmpCalendarTab(empId){return _pcRenderCalendar(empId);}
 function renderEmpApvTab(empId){return renderApprovalPage(CU?CU.id:empId,'empSbApv');}
 function _empApvShowList(status){_apvTab=status==='pending'?'inbox':'done';_apvSelId=null;renderEmpApvTab(CU?CU.id:curEmpId);}
 
@@ -7902,7 +7905,8 @@ function _empNotifGo(idx){
   if(tp==='approval'){setEmpTab('approval');return;}
   _renderEmpHomeNotif(curEmpId||(CU&&CU.id));
 }
-function _renderEmpChecklist(empId){
+function _renderEmpChecklist(empId){return _pcRenderChecklist(empId);}
+function _legacyRenderEmpChecklist(empId){
   var box=document.getElementById('empChecklistBox');if(!box)return;
   var mon=new Date();mon.setHours(0,0,0,0);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
   var dates=[];for(var i=0;i<7;i++){var dd=new Date(mon);dd.setDate(mon.getDate()+i);dates.push(_ymdLocal(dd));}
@@ -7948,10 +7952,10 @@ function _empChecklistHtml(empId,dates,today,checkSet,bookings){
 }
 function printMyChecklist(empId){
   var p=getP(empId);var name=(p&&p.name)||empId;
-  var mineDaily=CHECKLIST_ITEMS.filter(function(it){return it.kind==='daily'&&_clHasEmp(it.assignee,empId);});
-  var mineWeekly=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly'&&_clHasEmp(it.assignee,empId);});
+  var mineDaily=CHECKLIST_ITEMS.filter(function(it){return it.kind==='daily'&&_wkPeriodOk(it,_pcDate||_dailyToday())&&_clHasEmp(it.assignee,empId);});
+  var mineWeekly=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly'&&_pcWeek(_pcDate||_dailyToday()).some(function(d){return _pcOccurs(it,d,empId);})&&_clHasEmp(it.assignee,empId);});
   var dows=['일','월','화','수','목','금','토'];
-  var now=new Date();
+  var now=new Date((_pcDate||_dailyToday())+'T12:00:00');
   var dateStr=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+now.getDate()+'일 ('+dows[now.getDay()]+')';
   function row(txt,badge){
     return '<div style="display:flex;align-items:flex-start;gap:12px;padding:11px 4px;border-bottom:1px solid #cbd5e1">'
@@ -8112,7 +8116,7 @@ function _tlImport(){
   if(!_tlOwner())return;
   var ready=(CHECKLIST_ITEMS&&CHECKLIST_ITEMS.length)?Promise.resolve(CHECKLIST_ITEMS):loadChecklistItems();
   ready.then(function(items){
-    var mine=(items||[]).filter(function(it){return it.kind==='daily'&&_clHasEmp(it.assignee,_tlEmpId);});
+    var mine=(items||[]).filter(function(it){return it.kind==='daily'&&_wkPeriodOk(it,_dailyToday())&&_clHasEmp(it.assignee,_tlEmpId);});
     var have={};_tlItems.forEach(function(x){if(x.ck)have[x.ck]=1;});
     var added=0;
     mine.forEach(function(ci){
