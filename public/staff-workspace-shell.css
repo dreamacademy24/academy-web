@@ -98,3 +98,19 @@
 @media(max-width:1000px) and (min-width:801px){#ptRoot .pt-wrap{grid-template-columns:320px minmax(0,1fr)}#ptRoot .pt-tree{padding:14px 10px}#ptRoot .pt-title{font-size:15px}}
 @media(max-width:800px){#ptRoot .pt-wrap{grid-template-columns:minmax(0,1fr);gap:16px}#ptRoot .pt-tree{position:static;max-height:52vh;max-height:52dvh;padding:14px}#ptRoot .pt-detail{padding:20px 16px}#ptRoot .pt-title{font-size:16px}#ptRoot .pt-body{padding:16px;font-size:16px}}
 @media print{#ptRoot .pt-wrap{display:block}#ptRoot .pt-tree{display:none}#ptRoot .pt-detail{border:0;padding:0}}
+
+/* Project body checklist: readable at every folder depth and on touch screens. */
+#ptRoot .pt-body .pt-chkline{display:flex;align-items:flex-start;gap:12px;min-height:48px;box-sizing:border-box;padding:12px 10px;margin:6px 0;border:1px solid #e6e8f0;border-radius:8px;background:#fafbfe;line-height:1.75;overflow-wrap:anywhere}
+#ptRoot .pt-body .pt-chkline input[type=checkbox]{width:26px;height:26px;min-width:26px;flex:0 0 26px;margin:0;accent-color:#7455cf;cursor:pointer;align-self:flex-start}
+#ptRoot .pt-body .pt-chkline:hover{border-color:#b9a9e6;background:#f7f4ff}
+#ptRoot .pt-body .pt-chkline:focus-within{outline:2px solid #a493da;outline-offset:2px}
+#ptRoot .pt-body .pt-chktext{flex:1;min-width:0;display:block;white-space:pre-wrap;line-height:1.75}
+#ptRoot .pt-body .pt-chkline:has(>input:checked){background:#f1f7f3;border-color:#cce2d2}
+#ptRoot .pt-toolbar{gap:6px;flex-wrap:wrap}
+#ptRoot .pt-toolbar .pt-tb{min-height:40px;min-width:40px}
+@media(max-width:700px){#ptRoot .pt-body{padding:12px;font-size:15px}#ptRoot .pt-body .pt-chkline{padding:12px 8px;gap:12px;min-height:56px}#ptRoot .pt-body .pt-chkline input[type=checkbox]{width:30px;height:30px;min-width:30px;flex-basis:30px}#ptRoot .pt-toolbar .pt-tb{min-height:44px}}
+
+/* Existing saved bodies also contain standalone inline checkboxes. */
+#ptRoot .pt-body input[type=checkbox]{width:26px;height:26px;min-width:26px;margin:8px 12px 8px 0;vertical-align:middle;accent-color:#7455cf;cursor:pointer}
+#ptRoot .pt-body input[type=checkbox]:focus-visible{outline:3px solid #b4a2e3;outline-offset:3px}
+@media(max-width:700px){#ptRoot .pt-body input[type=checkbox]{width:30px;height:30px;min-width:30px;margin:9px 12px 9px 0}}

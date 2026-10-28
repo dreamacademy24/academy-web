@@ -1417,7 +1417,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-reauth1">
 <script src="/staff-workspace-media.js?v=20261005-video1"></script>
 <script src="/staff-project-files.js?v=20261015"></script>
-<link rel="stylesheet" href="/staff-workspace-shell.css?v=20260911-reauth1">
+<link rel="stylesheet" href="/staff-workspace-shell.css?checkspacing=20261028&v=20260911-reauth1">
 <link rel="stylesheet" href="/staff-chat.css?v=20260918-upload1"><script src="/staff-chat.js?v=20260918-upload1"></script>
 <link rel="stylesheet" href="/staff-mobile.css?v=20260916-1"><script src="/staff-mobile.js?v=20260916-1" defer></script>
 <script defer src="/staff-notice-navigation.js?v=20260929-1"></script>
@@ -11380,7 +11380,7 @@ function ptRenderDetail(id){
     +'<button type="button" class="pt-tb" onmousedown="return ptCmd(event,\'italic\')"><i>I</i></button>'
     +'<button type="button" class="pt-tb" onmousedown="return ptCmd(event,\'insertUnorderedList\')">≡</button>'
     +'<button type="button" class="pt-tb" onmousedown="return ptCmd(event,\'red\')" style="color:#c0392b;font-weight:700">A</button>'
-    +'<button type="button" class="pt-tb" onmousedown="return ptCmd(event,\'check\')" title="체크 항목">\u2611</button>'
+    +'<button type="button" class="pt-tb" onmousedown="return ptCmd(event,\'check\')" title="체크 항목 추가">\u2611 체크 항목 추가</button>'
     +'</div>';
   h+='<div id="ptBody" contenteditable="true" class="pt-body" onblur="ptSaveField(\''+id+'\',\'body\',ptSyncBody(this))" data-ph="내용·설명을 자유롭게 작성하세요... (☑ 버튼으로 체크 항목 추가)">'+(n.body||'')+'</div>';
   h+='<div id="ptSaveState" class="swp-save-state" role="status"></div><div style="font-size:12px;color:var(--text3);margin-top:4px">'+(n.updated_at?'수정: '+ptTs(n.updated_at):'')+'</div>';
