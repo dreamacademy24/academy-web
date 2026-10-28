@@ -86,6 +86,20 @@ export default function BookingDetailPage() {
   const [rowEditing, setRowEditing] = useState<{table:string; id:string|null; idx:number|null} | null>(null);
   const [rowForm, setRowForm] = useState<Record<string, any>>({});
   const [rowSaving, setRowSaving] = useState(false);
+  const [studentAdding, setStudentAdding] = useState(false);
+  const [studentDraft, setStudentDraft] = useState({name_kr:'',name_en:'',age:'',level:'junior',academy_start:'',academy_end:''});
+  const [studentSaving, setStudentSaving] = useState(false);
+  async function addBookingStudent() {
+    if (!studentDraft.name_kr.trim() || studentSaving) return;
+    setStudentSaving(true);
+    try {
+      const res = await fetch(`/api/bookings/${id}/students`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(studentDraft)});
+      const result = await res.json();
+      if (!res.ok) throw Error(result.error || '학생을 추가하지 못했습니다.');
+      await load(); setStudentAdding(false); toastOk('학생을 추가했습니다. 인보이스와 체크인 명단도 확인해주세요.');
+    } catch(error) {toastErr(error instanceof Error ? error.message : '연결을 확인해주세요.');}
+    finally {setStudentSaving(false);}
+  }
 
   // 보호자 체류 기간 (식단 인원 연동)
   const [gsEditing, setGsEditing] = useState(false);
@@ -890,7 +904,7 @@ export default function BookingDetailPage() {
                 : (() => {
                     const adults = b.adults ?? b.num_adults ?? null;
                     const stuLen = Array.isArray(data?.students) ? data!.students.length : 0;
-                    const children = stuLen > 0 ? stuLen : (b.children ?? b.num_children ?? null);
+                      const children = b.children ?? b.num_children ?? (stuLen || null);
                     return (adults === null && children === null)
                       ? <div className="val">-</div>
                       : <div className="val">보호자 {adults ?? "-"}명 + 아이 {children ?? "-"}명</div>;
@@ -1106,8 +1120,19 @@ export default function BookingDetailPage() {
         <div className="sec">
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, paddingBottom: 8, borderBottom: "2px solid #e2e8f0" }}>
             <h2 style={{ flex: 1, fontSize: 15, fontWeight: 800, color: "#1a6fc4" }}>학생 목록 ({students.length}명)</h2>
-            <button className="btn btn-sm btn-blue" onClick={() => router.push(`/admin/bookings?tab=list`)}>+ 학생 추가</button>
+            <button type="button" className="btn btn-sm btn-blue" onClick={() => {setStudentDraft({name_kr:'',name_en:'',age:'',level:'junior',academy_start:b.academy_start||students[0]?.academy_start||'',academy_end:b.academy_end||students[0]?.academy_end||''});setStudentAdding(true);}}>+ 학생 추가</button>
           </div>
+          {studentAdding && <form onSubmit={e=>{e.preventDefault();void addBookingStudent();}} style={{padding:16,background:'#f0f6ff',marginBottom:16,borderRadius:8}}>
+            <h3>이 예약에 학생 추가</h3>
+            <div style={{display:'flex',gap:10,flexWrap:'wrap',margin:'12px 0'}}>
+              <label>학생 이름<input required aria-label="추가 학생 이름" className="ed-inp" value={studentDraft.name_kr} onChange={e=>setStudentDraft({...studentDraft,name_kr:e.target.value})}/></label>
+              <label>영문 이름<input aria-label="추가 학생 영문 이름" className="ed-inp" value={studentDraft.name_en} onChange={e=>setStudentDraft({...studentDraft,name_en:e.target.value})}/></label>
+              <label>생년월일<input aria-label="추가 학생 생년월일" placeholder="YYYYMMDD" className="ed-inp" value={studentDraft.age} onChange={e=>setStudentDraft({...studentDraft,age:e.target.value})}/></label>
+              <label>과정<select aria-label="추가 학생 과정" value={studentDraft.level} onChange={e=>setStudentDraft({...studentDraft,level:e.target.value})}><option value="junior">주니어</option><option value="kinder">킨더</option></select></label>
+              <label>수업 시작<input aria-label="추가 학생 수업 시작" type="date" value={studentDraft.academy_start} onChange={e=>setStudentDraft({...studentDraft,academy_start:e.target.value})}/></label>
+              <label>수업 종료<input aria-label="추가 학생 수업 종료" type="date" value={studentDraft.academy_end} onChange={e=>setStudentDraft({...studentDraft,academy_end:e.target.value})}/></label>
+            </div><button className="btn btn-blue" disabled={studentSaving}>{studentSaving?'저장 중…':'학생 저장'}</button> <button type="button" className="btn" disabled={studentSaving} onClick={()=>setStudentAdding(false)}>취소</button>
+          </form>}
           {students.length === 0 ? <div className="empty">등록된 학생이 없습니다<br/>손님이 /booking 폼에서 등록하거나 어드민이 직접 추가할 수 있습니다</div> :
             students.map((s: any, i: number) => {
               // idx 기반 매칭 (booking_json 학생은 s.id 없음 → idx로 식별)

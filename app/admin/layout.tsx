@@ -24,6 +24,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "학생관리", href: "/admin/students" },
     { label: "튜터", href: "/admin/tutor-class" },
     { label: "화상영어", href: "/admin/online-class" },
+    { label: "상비약 관리", href: "/admin/med-forms" },
   ]},
   { title: "예약 · 아카데미", items: [
     { label: "예약 관리", href: "/admin/bookings" },
@@ -45,7 +46,6 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "셔틀·기사 관리", href: "/admin/shuttle-management" },
     { label: "차량 스케줄", href: "/admin/vehicle-schedule" },
     { label: "체크인 준비", href: "/admin/checkin-details" },
-    { label: "상비약 관리", href: "/admin/med-forms" },
     { label: "시재 관리", href: "/admin/cash-ledger" },
   ]},
   { title: "리조트", items: [
