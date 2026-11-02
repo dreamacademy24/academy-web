@@ -17,8 +17,8 @@ export default function DiscountCodeField({value,onChange}:{value:string;onChang
     } catch {if(current===sequence.current)setMessage('코드를 확인하지 못했습니다. 다시 입력해주세요.');}
   }
   return <div style={{marginTop:16,padding:16,background:'#fff',border:'1px solid #d1d5db',borderRadius:10}}>
-    <label htmlFor="booking-discount-code" style={{display:'block',fontWeight:700,marginBottom:8}}>할인코드 <span style={{fontWeight:400,color:'#64748b'}}>(선택)</span></label>
-    <input id="booking-discount-code" value={value} maxLength={40} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="할인코드를 입력해주세요" onBlur={check} onChange={e=>{sequence.current++;onChange(e.target.value);setMessage('');}} style={{width:'100%',boxSizing:'border-box',padding:'12px',fontSize:16,border:'1px solid #cbd5e1',borderRadius:8}} />
+    <label htmlFor="booking-discount-code" style={{display:'block',fontWeight:700,marginBottom:8}}>예약 코드 <span style={{fontWeight:400,color:'#64748b'}}>(선택)</span></label>
+    <input id="booking-discount-code" value={value} maxLength={40} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="안내받은 코드가 있다면 입력해 주세요." onBlur={check} onChange={e=>{sequence.current++;onChange(e.target.value);setMessage('');}} style={{width:'100%',boxSizing:'border-box',padding:'12px',fontSize:16,border:'1px solid #cbd5e1',borderRadius:8}} />
     {message&&<p role="status" style={{margin:'8px 0 0',fontSize:13,color:valid?'#15803d':'#b45309'}}>{message}</p>}
   </div>;
 }

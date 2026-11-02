@@ -5,10 +5,10 @@ export async function GET(req: Request) {
   const raw = new URL(req.url).searchParams.get('code');
   if (raw !== null) {
     const code = raw.trim().toLowerCase();
-    if (!/^[a-z0-9_-]{3,40}$/.test(code)) return NextResponse.json({ error: '할인코드를 확인해주세요.' }, { status: 400 });
+    if (!/^[a-z0-9_-]{3,40}$/.test(code)) return NextResponse.json({ error: '예약 코드를 확인해 주세요.' }, { status: 400 });
     const { data, error } = await portalDb().from('booking_discount_codes').select('code,amount').eq('code',code).eq('active',true).maybeSingle();
     if(error) return NextResponse.json({error:'코드를 확인하지 못했습니다. 다시 시도해주세요.'},{status:503});
-    return NextResponse.json(data || { error:'사용할 수 없는 할인코드입니다.' }, {status:data?200:400,headers:{'Cache-Control':'no-store'}});
+    return NextResponse.json(data || { error:'사용할 수 없는 예약 코드입니다.' }, {status:data?200:400,headers:{'Cache-Control':'no-store'}});
   }
   if (!await isPortalAdmin(req)) return NextResponse.json({error:'관리자 로그인이 필요합니다.'},{status:403});
   const { data, error } = await portalDb().from('booking_discount_codes').select('*').order('created_at',{ascending:false});
