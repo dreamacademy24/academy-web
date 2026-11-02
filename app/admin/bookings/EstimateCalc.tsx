@@ -936,6 +936,36 @@ export default function EstimateCalc(){
   const todayFmt=now.toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
   const todayFile=now.toISOString().slice(0,10).replace(/-/g,"");
 
+  function inclusionBoxes(p:PlanState) {
+            // accom 값 → 표시할 sub 패키지 박스 목록
+            const subBoxes: { label: string; items: PkgItem[] }[] = [];
+            if (p.accom === "dreamhouse_jaypark") {
+              subBoxes.push({ label: "드림하우스", items: INCLUSIONS_DH });
+              subBoxes.push({ label: "제이파크", items: INCLUSIONS_JP });
+            } else if (p.accom === "dreamhouse_cubenine") {
+              subBoxes.push({ label: "드림하우스", items: INCLUSIONS_DH });
+              subBoxes.push({ label: "큐브나인", items: INCLUSIONS_C9 });
+            } else if (p.accom === "jpark" || p.accom === "jaypark") {
+              subBoxes.push({ label: "제이파크 단독", items: INCLUSIONS_JP });
+            } else if (p.accom === "cubenine") {
+              subBoxes.push({ label: "큐브나인 단독", items: INCLUSIONS_C9 });
+            } else if (p.accom === "commute") {
+              subBoxes.push({ label: "통학형", items: [...INCLUSIONS_COMMUTE.filter(it => it.title !== "통학형 안내"), { icon: "", title: "아이들 점심", desc: "학원에서 제공하는 점심 포함" }] });
+            } else {
+              // dreamhouse 단독
+              subBoxes.push({ label: "드림하우스 단독", items: INCLUSIONS_DH });
+            }
+    return subBoxes;
+  }
+  const inclusionGroups: {subBoxes:{label:string;items:PkgItem[]}[];indexes:number[]}[]=[];
+  plans.forEach((p,index)=>{
+    const subBoxes=inclusionBoxes(p);
+    const key=JSON.stringify(subBoxes);
+    const existing=inclusionGroups.find(g=>JSON.stringify(g.subBoxes)===key);
+    if(existing) existing.indexes.push(index);
+    else inclusionGroups.push({subBoxes,indexes:[index]});
+  });
+
   function planName(p:PlanState){
     if(isCombo(p.accom)){
       const subLabel = p.accom==="dreamhouse_jaypark"?"제이파크":"큐브나인";
@@ -1256,7 +1286,22 @@ export default function EstimateCalc(){
           <div style={{fontSize:11,color:"#94a3b8"}}>발행일: {todayFmt}</div>
         </div>
 
-        <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:12}}>
+        {plans.length>1 ? <table aria-label="견적안 비교" style={{width:"100%",tableLayout:"fixed",borderCollapse:"collapse",fontSize:12,lineHeight:1.5,marginBottom:12}}>
+          <thead><tr><th style={{width:48,padding:"8px 3px",background:"#eef3fc"}}>항목</th>{plans.map((p,i)=><th key={i} style={{padding:"8px 3px",background:"#eef3fc",color:"#1a6fc4"}}>{i+1}안 {i>0&&<button className="no-print" title="이 안 제거" onClick={()=>setPlans(prev=>prev.filter((_,n)=>n!==i))} style={{border:0,background:"none",color:"#94a3b8",padding:2}}>×</button>}</th>)}</tr></thead>
+          <tbody>{[
+            {label:"숙소·객실",values:plans.map(p=>planName(p))},
+            {label:"기간",values:plans.map(p=>totalWeeks(p)+"주")},
+            {label:"시작일",values:plans.map(p=>p.checkin||"미정")},
+            {label:"종료일",values:plans.map(p=>p.checkin?calcCheckout(p.checkin,totalWeeks(p),p.accom==="commute"):"미정")},
+            {label:"인원",values:plans.map(p=>p.accom==="commute"?`아이 ${p.kids}명`:`보호자 ${p.parents}명 · 아이 ${p.kids}명`)},
+            {label:"시즌",values:plans.map(p=>{const r=calcPlan(p);return r?.mix?`비수기 ${r.mix.off}주 / 성수기 ${r.mix.peak}주`:seasonLabel[p.season]})},
+            {label:"정가",values:plans.map(p=>{const r=calcPlan(p);return r?won(r.listPrice):"가격 없음"})},
+            {label:"시즌가",values:plans.map(p=>{const r=calcPlan(p);return r?won(r.seasonPrice):"—"})},
+            ...(plans.some(p=>p.extras.some(e=>e.name&&e.amount))?[{label:"추가",values:plans.map(p=>p.extras.filter(e=>e.name&&e.amount).map(e=>e.name+" +"+won(e.amount)).join(" / ")||"—")}]:[]),
+            ...(plans.some(p=>p.discounts.some(e=>e.name&&e.amount))?[{label:"차감",values:plans.map(p=>p.discounts.filter(e=>e.name&&e.amount).map(e=>e.name+" -"+won(e.amount)).join(" / ")||"—")}]:[]),
+            {label:"최종 금액",values:plans.map(p=>{const r=calcPlan(p);return r?won(r.finalPrice):"가격 없음"}),final:true},
+          ].map(row=><tr key={row.label} style={{background:row.final?"#edf4ff":"#fff",fontWeight:row.final?800:400,color:row.final?"#1a6fc4":"#334155"}}><th style={{padding:"8px 3px",borderBottom:"1px solid #e2e8f0",fontSize:11}}>{row.label}</th>{row.values.map((v,i)=><td key={i} style={{padding:"8px 4px",textAlign:"center",borderBottom:"1px solid #e2e8f0",borderLeft:"1px solid #edf1f7",overflowWrap:"anywhere",fontSize:row.final?12:11}}>{v}</td>)}</tr>)}</tbody>
+        </table> : <>        <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:12}}>
           {plans.map((p,i)=>{
             const r=calcPlan(p);
             const onRemove=i>=1?()=>setPlans(prev=>prev.filter((_,idx)=>idx!==i)):undefined;
@@ -1264,27 +1309,11 @@ export default function EstimateCalc(){
           })}
         </div>
 
+</>}
+
         {/* 패키지 포함/불포함 박스 영역 */}
         <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:12,marginBottom:12}}>
-          {plans.map((p, i) => {
-            // accom 값 → 표시할 sub 패키지 박스 목록
-            const subBoxes: { label: string; items: PkgItem[] }[] = [];
-            if (p.accom === "dreamhouse_jaypark") {
-              subBoxes.push({ label: "드림하우스", items: INCLUSIONS_DH });
-              subBoxes.push({ label: "제이파크", items: INCLUSIONS_JP });
-            } else if (p.accom === "dreamhouse_cubenine") {
-              subBoxes.push({ label: "드림하우스", items: INCLUSIONS_DH });
-              subBoxes.push({ label: "큐브나인", items: INCLUSIONS_C9 });
-            } else if (p.accom === "jpark" || p.accom === "jaypark") {
-              subBoxes.push({ label: "제이파크 단독", items: INCLUSIONS_JP });
-            } else if (p.accom === "cubenine") {
-              subBoxes.push({ label: "큐브나인 단독", items: INCLUSIONS_C9 });
-            } else if (p.accom === "commute") {
-              subBoxes.push({ label: "통학형", items: [...INCLUSIONS_COMMUTE.filter(it => it.title !== "통학형 안내"), { icon: "", title: "아이들 점심", desc: "학원에서 제공하는 점심 포함" }] });
-            } else {
-              // dreamhouse 단독
-              subBoxes.push({ label: "드림하우스 단독", items: INCLUSIONS_DH });
-            }
+          {inclusionGroups.map(({subBoxes, indexes}, i) => {
             return (
               <div key={i} style={{
                 
@@ -1296,7 +1325,7 @@ export default function EstimateCalc(){
                 boxShadow:"0 1px 2px rgba(0,0,0,0.04)",
               }}>
                 <div style={{fontSize:15,fontWeight:700,marginBottom:14,color:"#111"}}>
-                  포함 <span style={{fontSize:12,fontWeight:500,color:"#64748b"}}>· {i+1}안 {accomLabel[p.accom]}</span>
+                  {indexes.map(n=>`${n+1}안`).join("·")} {indexes.length>1?"공통 포함 사항":"포함 사항"}
                 </div>
                 {subBoxes.map((box, bi) => (
                   <div key={bi} style={{marginBottom:subBoxes.length>1?14:0}}>
