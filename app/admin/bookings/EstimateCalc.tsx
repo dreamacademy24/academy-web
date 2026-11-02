@@ -1150,9 +1150,9 @@ export default function EstimateCalc(){
   }
 
   /* ── 출력 카드 ── */
-  function renderCard(plan:PlanState,r:ReturnType<typeof calcPlan>,label:string,onRemove?:()=>void){
+  function renderCard(plan:PlanState,r:ReturnType<typeof calcPlan>,label:string,onRemove?:()=>void,compact=false){
     if(!r) return(
-      <div style={{flex:1,minWidth:0,background:"#f8fafc",borderRadius:12,padding:32,textAlign:"center",color:"#94a3b8",fontSize:13,border:"1px solid #e2e8f0",position:"relative"}}>
+      <div style={{flex:1,minWidth:0,background:"#f8fafc",borderRadius:12,padding:32,textAlign:"center",color:"#94a3b8",fontSize:compact?11:13,border:"1px solid #e2e8f0",position:"relative"}}>
         {onRemove&&<button onClick={onRemove} className="no-print" style={{position:"absolute",top:8,right:8,background:"transparent",border:"none",color:"#ef4444",fontSize:18,cursor:"pointer",lineHeight:1,fontFamily:"'Noto Sans KR',sans-serif"}} title="이 안 제거">×</button>}
         {label}: 가격 정보 없음<br/>조건을 변경해주세요.
       </div>
@@ -1161,29 +1161,29 @@ export default function EstimateCalc(){
     const hasDiscounts=plan.discounts.filter(e=>e.name&&e.amount).length>0;
     const showStrike=r.listPrice!==r.finalPrice;
     return(
-      <div style={{flex:1,minWidth:0,background:"#fff",borderRadius:12,padding:16,border:"1px solid #e2e8f0",position:"relative"}}>
+      <div style={{flex:1,minWidth:0,background:"#fff",borderRadius:12,padding:compact?8:16,border:"1px solid #e2e8f0",position:"relative"}}>
         {onRemove&&<button onClick={onRemove} className="no-print" style={{position:"absolute",top:8,right:8,background:"transparent",border:"none",color:"#ef4444",fontSize:18,cursor:"pointer",lineHeight:1,fontFamily:"'Noto Sans KR',sans-serif"}} title="이 안 제거">×</button>}
         {/* 카드 헤더 */}
-        <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"4px 12px",textAlign:"left",marginBottom:8,paddingBottom:8,borderBottom:"2px solid #1a6fc4"}}>
+        <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"4px 12px",flexDirection:compact?"column":undefined,textAlign:compact?"center":"left",width:"100%",marginBottom:8,paddingBottom:8,borderBottom:"2px solid #1a6fc4"}}>
           <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e",marginBottom:4}}>{label}</div>
-          <div style={{fontSize:13,fontWeight:600,color:"#1a6fc4",marginBottom:4}}>{planName(plan)} · 총 {totalWeeks(plan)}주</div>
+          <div style={{fontSize:compact?11:13,fontWeight:600,color:"#1a6fc4",marginBottom:4}}>{planName(plan)} · 총 {totalWeeks(plan)}주</div>
           {plan.checkin && (
-            <div style={{fontSize:12,color:"#475569",marginBottom:4}}>{plan.accom==="commute"?"수업시작":"체크인"}: {plan.checkin} / {plan.accom==="commute"?"수업종료":"체크아웃"}: {calcCheckout(plan.checkin,totalWeeks(plan),plan.accom==="commute")}</div>
+            <div style={{fontSize:compact?10:12,color:"#475569",marginBottom:4}}>{plan.accom==="commute"?"수업시작":"체크인"}: {plan.checkin} / {plan.accom==="commute"?"수업종료":"체크아웃"}: {calcCheckout(plan.checkin,totalWeeks(plan),plan.accom==="commute")}</div>
           )}
           <div style={{marginBottom:4}}>{seasonBadge(plan.season)}</div>
-          <div style={{fontSize:12,color:"#6b7c93"}}>{plan.accom!=="commute" ? `보호자 ${plan.parents}명 + 아이 ${plan.kids}명` : `아이 ${plan.kids}명`}</div>
+          <div style={{fontSize:compact?10:12,color:"#6b7c93"}}>{plan.accom!=="commute" ? `보호자 ${plan.parents}명 + 아이 ${plan.kids}명` : `아이 ${plan.kids}명`}</div>
         </div>
 
         {/* 콤보 숙소별 내역 */}
         {r.breakdown && (
           <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 12px",marginBottom:10}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"4px 0",fontSize:13}}>
+            <div style={{display:"flex",flexDirection:compact?"column":undefined,gap:2,justifyContent:"space-between",alignItems:"baseline",padding:"4px 0",fontSize:13}}>
               <span style={{color:"#374151"}}>
                 {r.breakdown.dh.label} {r.breakdown.dh.room} <span style={{color:"#94a3b8",fontWeight:500}}>· {r.breakdown.dh.weeks}주</span>
               </span>
               <span style={{fontWeight:700,color:"#1a1a2e"}}>{won(r.breakdown.dh.price)}</span>
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"4px 0",fontSize:13}}>
+            <div style={{display:"flex",flexDirection:compact?"column":undefined,gap:2,justifyContent:"space-between",alignItems:"baseline",padding:"4px 0",fontSize:13}}>
               <span style={{color:"#374151"}}>
                 {r.breakdown.sub.label} {r.breakdown.sub.label==="제이파크"?r.breakdown.sub.room+" 가든뷰":r.breakdown.sub.room} <span style={{color:"#94a3b8",fontWeight:500}}>· {r.breakdown.sub.weeks}주</span>
               </span>
@@ -1197,14 +1197,14 @@ export default function EstimateCalc(){
 
         {/* 정가 취소선 */}
         {showStrike&&(
-          <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:13}}>
+          <div style={{display:"flex",flexDirection:compact?"column":undefined,gap:2,justifyContent:"space-between",padding:"8px 0",fontSize:13}}>
             <span style={{color:"#94a3b8"}}>정가</span>
             <span style={{textDecoration:"line-through",color:"#94a3b8"}}>{won(r.listPrice)}</span>
           </div>
         )}
 
         {/* 시즌가 */}
-        <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:14}}>
+        <div style={{display:"flex",flexDirection:compact?"column":undefined,gap:2,justifyContent:"space-between",padding:"8px 0",fontSize:14}}>
           <span style={{color:"#374151"}}>{r.mix?`혼합 시즌 (비수기 ${r.mix.off}주 + 성수기 ${r.mix.peak}주)`:seasonLabel[plan.season]+" 가격"}</span>
           <span style={{fontWeight:600,color:"#1a1a2e"}}>{won(r.seasonPrice)}</span>
         </div>
@@ -1217,7 +1217,7 @@ export default function EstimateCalc(){
         {/* 추가항목 */}
         {hasExtras&&<>
           {plan.extras.filter(e=>e.name&&e.amount).map((e,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:13}}>
+            <div key={i} style={{display:"flex",flexDirection:compact?"column":undefined,gap:2,justifyContent:"space-between",padding:"5px 0",fontSize:13}}>
               <span style={{color:"#6b7c93"}}>+ {e.name}</span>
               <span style={{color:"#1a6fc4",fontWeight:600}}>+{won(e.amount)}</span>
             </div>
@@ -1230,7 +1230,7 @@ export default function EstimateCalc(){
         {/* 할인항목 */}
         {hasDiscounts&&<>
           {plan.discounts.filter(e=>e.name&&e.amount).map((e,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:13}}>
+            <div key={i} style={{display:"flex",flexDirection:compact?"column":undefined,gap:2,justifyContent:"space-between",padding:"5px 0",fontSize:13}}>
               <span style={{color:"#6b7c93"}}>- {e.name}</span>
               <span style={{color:"#dc2626",fontWeight:600}}>-{won(e.amount)}</span>
             </div>
@@ -1241,11 +1241,11 @@ export default function EstimateCalc(){
         {/* 최종가 */}
         <div style={{borderTop:"2px solid #1a1a2e",marginTop:6,paddingTop:8}}>
           <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between",alignItems:"baseline",gap:4}}>
-            <span style={{fontSize:14,fontWeight:700,color:"#1a1a2e"}}>최종 견적 금액</span>
-            <span style={{fontSize:28,fontWeight:800,color:"#1a6fc4",whiteSpace:"nowrap"}}>{won(r.finalPrice)}</span>
+            <span style={{fontSize:compact?11:14,fontWeight:700,color:"#1a1a2e"}}>최종 견적 금액</span>
+            <span style={{fontSize:compact?"clamp(11px,3.6cqw,20px)":28,fontWeight:800,color:"#1a6fc4",whiteSpace:"nowrap"}}>{won(r.finalPrice)}</span>
           </div>
           {r.saving>0&&(
-            <div style={{textAlign:"right",marginTop:4,fontSize:12,fontWeight:600,color:"#059669"}}>
+            <div style={{textAlign:"right",marginTop:4,fontSize:compact?10:12,fontWeight:600,color:"#059669"}}>
               정가 대비 {won(r.saving)} 할인
             </div>
           )}
@@ -1279,37 +1279,16 @@ export default function EstimateCalc(){
       </div>
 
       {/* ── 출력 ── */}
-      <div id="estimate-result" ref={resultRef} style={{background:"#fff",width:"100%",maxWidth:560,boxSizing:"border-box",margin:"0 auto",borderRadius:14,padding:16,color:"#1e2a3a",lineHeight:1.65,overflowWrap:"anywhere",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
+      <div id="estimate-result" ref={resultRef} style={{containerType:"inline-size",background:"#fff",width:"100%",maxWidth:560,boxSizing:"border-box",margin:"0 auto",borderRadius:14,padding:16,color:"#1e2a3a",lineHeight:1.65,overflowWrap:"anywhere",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
         <div style={{textAlign:"left",marginBottom:12,paddingBottom:10,borderBottom:"1px solid #e2e8f0"}}>
           <div style={{fontSize:22,fontWeight:800,color:"#1e2a3a",letterSpacing:"-0.02em",marginBottom:2}}><span style={{color:"#2e6bd6"}}>D</span>ream <span style={{color:"#f0b429"}}>A</span>cademy</div>
           <div style={{fontSize:16,fontWeight:700,color:"#1a1a2e",marginBottom:6}}>우리 가족 맞춤 견적서</div>
           <div style={{fontSize:11,color:"#94a3b8"}}>발행일: {todayFmt}</div>
         </div>
 
-        {plans.length>1 ? <table aria-label="견적안 비교" style={{width:"100%",tableLayout:"fixed",borderCollapse:"collapse",fontSize:12,lineHeight:1.5,marginBottom:12}}>
-          <thead><tr><th style={{width:48,padding:"8px 3px",background:"#eef3fc"}}>항목</th>{plans.map((p,i)=><th key={i} style={{padding:"8px 3px",background:"#eef3fc",color:"#1a6fc4"}}>{i+1}안 {i>0&&<button className="no-print" title="이 안 제거" onClick={()=>setPlans(prev=>prev.filter((_,n)=>n!==i))} style={{border:0,background:"none",color:"#94a3b8",padding:2}}>×</button>}</th>)}</tr></thead>
-          <tbody>{[
-            {label:"숙소·객실",values:plans.map(p=>planName(p))},
-            {label:"기간",values:plans.map(p=>totalWeeks(p)+"주")},
-            {label:"시작일",values:plans.map(p=>p.checkin||"미정")},
-            {label:"종료일",values:plans.map(p=>p.checkin?calcCheckout(p.checkin,totalWeeks(p),p.accom==="commute"):"미정")},
-            {label:"인원",values:plans.map(p=>p.accom==="commute"?`아이 ${p.kids}명`:`보호자 ${p.parents}명 · 아이 ${p.kids}명`)},
-            {label:"시즌",values:plans.map(p=>{const r=calcPlan(p);return r?.mix?`비수기 ${r.mix.off}주 / 성수기 ${r.mix.peak}주`:seasonLabel[p.season]})},
-            {label:"정가",values:plans.map(p=>{const r=calcPlan(p);return r?won(r.listPrice):"가격 없음"})},
-            {label:"시즌가",values:plans.map(p=>{const r=calcPlan(p);return r?won(r.seasonPrice):"—"})},
-            ...(plans.some(p=>p.extras.some(e=>e.name&&e.amount))?[{label:"추가",values:plans.map(p=>p.extras.filter(e=>e.name&&e.amount).map(e=>e.name+" +"+won(e.amount)).join(" / ")||"—")}]:[]),
-            ...(plans.some(p=>p.discounts.some(e=>e.name&&e.amount))?[{label:"차감",values:plans.map(p=>p.discounts.filter(e=>e.name&&e.amount).map(e=>e.name+" -"+won(e.amount)).join(" / ")||"—")}]:[]),
-            {label:"최종 금액",values:plans.map(p=>{const r=calcPlan(p);return r?won(r.finalPrice):"가격 없음"}),final:true},
-          ].map(row=><tr key={row.label} style={{background:row.final?"#edf4ff":"#fff",fontWeight:row.final?800:400,color:row.final?"#1a6fc4":"#334155"}}><th style={{padding:"8px 3px",borderBottom:"1px solid #e2e8f0",fontSize:11}}>{row.label}</th>{row.values.map((v,i)=><td key={i} style={{padding:"8px 4px",textAlign:"center",borderBottom:"1px solid #e2e8f0",borderLeft:"1px solid #edf1f7",overflowWrap:"anywhere",fontSize:row.final?12:11}}>{v}</td>)}</tr>)}</tbody>
-        </table> : <>        <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:12}}>
-          {plans.map((p,i)=>{
-            const r=calcPlan(p);
-            const onRemove=i>=1?()=>setPlans(prev=>prev.filter((_,idx)=>idx!==i)):undefined;
-            return <div key={i} style={{minWidth:0,display:"flex"}}>{renderCard(p,r,`${i+1}안`,onRemove)}</div>;
-          })}
+        <div aria-label="견적안 비교" style={{display:"grid",gridTemplateColumns:plans.length>1?`repeat(${plans.length},minmax(0,1fr))`:"1fr",gap:8,marginBottom:12,alignItems:"stretch"}}>
+          {plans.map((p,i)=><div key={i} style={{minWidth:0,display:"flex"}}>{renderCard(p,calcPlan(p),`${i+1}안`,i>0?()=>setPlans(prev=>prev.filter((_,n)=>n!==i)):undefined,plans.length>1)}</div>)}
         </div>
-
-</>}
 
         {/* 패키지 포함/불포함 박스 영역 */}
         <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:12,marginBottom:12}}>
