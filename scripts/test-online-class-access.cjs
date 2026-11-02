@@ -1,0 +1,24 @@
+// Run: node scripts/test-online-class-access.cjs
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const ts = require('typescript');
+const exportsObject = {};
+const source = fs.readFileSync(path.join(__dirname, '../lib/onlineClassAccess.ts'), 'utf8');
+vm.runInNewContext(ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText, {exports:exportsObject,Date});
+const {onlineClassOpeningDate: date, onlineClassOpen: open} = exportsObject;
+assert.equal(date('2027-01-02'), '2026-11-02');
+assert.equal(date('2027-04-30'), '2027-02-28');
+assert.equal(date('2028-04-30'), '2028-02-29');
+assert.equal(date('2026-02-30'), null);
+assert.equal(open({checkin_date:'2027-01-02'}, '2026-11-01'), false);
+assert.equal(open({checkin_date:'2027-01-02'}, '2026-11-02'), true);
+assert.equal(open({checkin_date:'2026-10-03',status:'완료'}, '2026-11-02'), true);
+assert.equal(open({checkin_date:'2026-10-03',status:'취소',portal_features:{online_class:true}}), false);
+assert.equal(open({checkin_date:'2026-10-03',booking_type:'commute'}), false);
+assert.equal(open({checkin_date:'2026-10-03',accom_type:'통학형'}), false);
+assert.equal(open({checkin_date:'2026-10-03',portal_features:{online_class:false}}), false);
+assert.equal(open({checkin_date:'2028-01-01',portal_features:{online_class:true}}), true);
+assert.equal(open({checkin_date:null}), false);
+console.log('Online English opening: 13 regression checks passed.');

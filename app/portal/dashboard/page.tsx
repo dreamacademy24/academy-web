@@ -21,6 +21,7 @@ export default function PortalDashboard() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [ocReady, setOcReady] = useState(false);
+  const [ocHasEnrollment, setOcHasEnrollment] = useState(false);
   const [previewOcUid, setPreviewOcUid] = useState<string | null>(null);
   const [authUser, setAuthUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -224,19 +225,7 @@ export default function PortalDashboard() {
       if (ocUid) {
         try {
           const rEn = await portalFetch(`/api/portal/online-class/enrollments?customer_user_id=${ocUid}`);
-          if (rEn.ok) { const de = await rEn.json(); if ((de.enrollments || []).length > 0) setOcReady(true); }
-        } catch {}
-        // D-60 자동 활성화: 올인원(통학형 제외) 예약이 체크인 60일 전 이내면 신청 가능하게 오픈
-        try {
-          const { data: myBks } = await supabase.from("bookings")
-            .select("checkin_date, accom_type, status, portal_features")
-            .eq("portal_user_id", ocUid).neq("status", "취소");
-          const _t2 = new Date(); _t2.setDate(_t2.getDate() + 60);
-          const lim = `${_t2.getFullYear()}-${String(_t2.getMonth() + 1).padStart(2, "0")}-${String(_t2.getDate()).padStart(2, "0")}`;
-          const eligible = (myBks || []).some(b =>
-            (b.portal_features as any)?.online_class === true ||
-            (!(b.accom_type || "").includes("통학") && (b.checkin_date || "9999") <= lim));
-          if (eligible) setOcReady(true);
+          if (rEn.ok) { const de = await rEn.json(); if (!cancelled && (de.enrollments || []).length > 0) { setOcReady(true); setOcHasEnrollment(true); } }
         } catch {}
         try {
           const r2 = await portalFetch(`/api/portal/online-class/change-request?customer_user_id=${ocUid}`);
@@ -365,6 +354,9 @@ export default function PortalDashboard() {
   // 예약별 앱 메뉴 권한 (카테고리 기본값 + 어드민 오버라이드). 예약 없으면 null
   const feats = bookingInfo ? resolvePortalFeatures(bookingInfo) : null;
   // 화상영어 전용 계정: 예약 연결 없음 + 화상영어 수강권만 있는 손님 → 화상영어·공지만 표시
+  const onlineReady = ocReady || feats?.online_class === true;
+  const onlinePreviewUid = (session as unknown as {admin_view?: boolean})?.admin_view ? bookingInfo?.portal_user_id || previewOcUid : previewOcUid;
+  const onlineApplyHref = "/portal/online-class/apply" + (onlinePreviewUid ? `?preview_uid=${encodeURIComponent(onlinePreviewUid)}` : "");
   const ocOnly = !bookingInfo && !session && ocReady;
   const allCards = [
     { icon: "📋", title: "내 예약현황", desc: "예약·학생·결제 정보 확인", ready: feats ? (feats as any).my_booking !== false : true, href: "/portal/my-booking" },
@@ -375,7 +367,7 @@ export default function PortalDashboard() {
     { icon: "🎓", title: "애프터스쿨/필드트립", desc: "방과후 활동 및 현장학습", ready: feats ? feats.afterschool : true, href: "/after-school-fieldtrip" },
     { icon: "👩‍🏫", title: "튜터 수업 신청", desc: "방문 튜터 수업 새 신청", ready: feats ? feats.tutor : true, href: "/portal/tutor" },
     { icon: "✏️", title: "튜터 수업 변경요청", desc: "신청한 수업 취소·시간·날짜 변경", ready: feats ? feats.tutor : true, href: "/portal/tutor-change" },
-    { icon: "💻", title: "화상영어", desc: "온라인 영어 수업", ready: ocReady, href: previewOcUid ? `/portal/online-class?preview_uid=${previewOcUid}` : "/portal/online-class" },
+    { icon: "💻", title: "화상영어", desc: "온라인 영어 수업", ready: onlineReady, href: previewOcUid ? `/portal/online-class?preview_uid=${previewOcUid}` : "/portal/online-class" },
     { icon: "🧾", title: "정산내역" + (bookingInfo?.settlement_open ? " (베타)" : ""), desc: "보증금·튜터비·추가비용 정산 내역", ready: (feats ? (feats as any).settlement === true : false) || !!bookingInfo?.settlement_open, href: "/portal/settlement" },
     { icon: "🍽", title: "식단", desc: "학생 점심(아카데미) · 드림하우스(올인원) 식단표", ready: feats ? feats.meal : true, href: "/portal/meal-menu" },
     { icon: "🗓", title: "상담 예약", desc: "학습 상담 일정 확인 및 예약", ready: feats ? feats.consultation : true, href: "/portal/consultation" },
@@ -505,6 +497,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           ) : null
         )}
       </div>
+
+      {feats?.online_class && !ocHasEnrollment && (
+        <a href={onlineApplyHref} style={{display:"block",marginBottom:20,padding:22,border:"1px solid #c7d2fe",borderRadius:16,background:"#eef2ff",textDecoration:"none",color:"#312e81"}}>
+          <strong style={{display:"block",fontSize:18,lineHeight:1.6}}>화상영어가 오픈되었습니다. 신청하세요!</strong>
+          <span style={{display:"block",fontSize:14,lineHeight:1.7,marginTop:6}}>연수 전·후 화상영어 수업의 희망 일정과 학생을 선택해주세요.</span>
+          <span style={{display:"inline-block",marginTop:12,fontWeight:700}}>화상영어 신청하기 →</span>
+        </a>
+      )}
 
       {/* 체류 기간 휴무일 사전 안내 팝업 */}
       {stayHolidays && (

@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { portalDb, isPortalAdmin, portalUser } from './portalAuth';
 import { packageBookings, packageBounds, studentKey, validatePackagePlan, buildPackageSchedule, initialPackagePlan } from './onlinePackagePlan';
+import { onlineClassOpen } from './onlineClassAccess';
 import { koreaToday } from './booking3';
 export async function packageContext(req:Request,params:{id?:string;uid?:string;student?:string}){
   const db=portalDb(),admin=await isPortalAdmin(req),user=admin?null:await portalUser(req);
@@ -14,8 +15,8 @@ export async function packageContext(req:Request,params:{id?:string;uid?:string;
     const s=await db.from('online_sessions').select('*').eq('enrollment_id',params.id).order('id');if(s.error)throw Error('기존 출석부를 확인하지 못했습니다.');sessions=s.data||[];
   }
   if(!uid)throw Error('손님 앱 계정을 먼저 연결하고 저장해주세요.');
-  const b=await db.from('bookings').select('id,reservation_no,students,checkin_date,checkout_date,dh_weeks,accom_weeks,status').eq('portal_user_id',uid).neq('status','취소').order('id');if(b.error)throw Error('연수 예약을 불러오지 못했습니다. 다시 시도해주세요.');
-  const all=packageBookings(b.data||[]),name=enrollment?.student_name||params.student||'';
+  const b=await db.from('bookings').select('id,reservation_no,students,checkin_date,checkout_date,dh_weeks,accom_weeks,status,accom_type,booking_type,portal_features').eq('portal_user_id',uid).neq('status','취소').order('id');if(b.error)throw Error('연수 예약을 불러오지 못했습니다. 다시 시도해주세요.');
+  const all=packageBookings((b.data||[]).filter(row=>admin || onlineClassOpen(row))),name=enrollment?.student_name||params.student||'';
   const own=all.filter(x=>!name||studentKey(x.student)===studentKey(name));
   const existing=await db.from('online_enrollments').select('id,student_name,total_sessions,package_booking_id,package_plan,status').eq('customer_user_id',uid).eq('enrollment_type','free_package').neq('status','cancelled');if(existing.error)throw Error('기존 패키지 수강권을 확인하지 못했습니다.');
   const claims=await db.from('online_package_sources').select('booking_id,student_key,enrollment_id').in('booking_id',all.map(x=>x.id));if(claims.error)throw Error('연수별 회차 연결을 확인하지 못했습니다.');
