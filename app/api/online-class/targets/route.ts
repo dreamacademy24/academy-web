@@ -29,8 +29,9 @@ export async function GET(req: Request) {
     .order('checkin_date')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const { data: enr } = await supabase.from('online_enrollments')
+  const { data: enr, error: enrollmentError } = await supabase.from('online_enrollments')
     .select('student_name, status')
+  if (enrollmentError) return NextResponse.json({ error: '수강 이력을 불러오지 못했습니다.' }, { status: 500 })
   const enrolledActive = new Set((enr || []).filter(e => e.status === 'active' || e.status === 'scheduled').map(e => (e.student_name || '').trim()))
   const enrolledEver = new Set((enr || []).map(e => (e.student_name || '').trim()))
 
