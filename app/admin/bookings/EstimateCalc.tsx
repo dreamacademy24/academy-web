@@ -936,24 +936,33 @@ export default function EstimateCalc(){
   const todayFmt=now.toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
   const todayFile=now.toISOString().slice(0,10).replace(/-/g,"");
 
+
+  // 견적에서는 생활 혜택을 먼저 안내합니다. 공유 원본의 다른 화면은 유지합니다.
+  const mealBenefit:PkgItem={icon:"",title:"평일 3식 프리미엄 도시락 포함",desc:"아침 / 점심 / 저녁"};
+  const shuttleBenefit:PkgItem={icon:"",title:"무료 투어 셔틀 포함",desc:"정해진 노선·시간에 이용 (휴무일 제외)"};
+  const airportBenefit:PkgItem={icon:"",title:"공항 픽업 & 드랍 포함",desc:"공항과 숙소 간 이동"};
+  const quoteDH:PkgItem[]=[mealBenefit,{icon:"",title:"주 6일 헬퍼 서비스 포함",desc:"청소 · 빨래 · 식사 준비 (휴무일 제외)"},shuttleBenefit,airportBenefit,...INCLUSIONS_DH.filter(it=>!it.title.includes("도시락")&&!it.title.includes("공항"))];
+  const quoteC9:PkgItem[]=[...INCLUSIONS_C9.filter(it=>!it.title.includes("공항")),shuttleBenefit,airportBenefit];
+  const quoteJP:PkgItem[]=[mealBenefit,shuttleBenefit,airportBenefit,...INCLUSIONS_JP.filter(it=>!it.title.includes("도시락")&&!it.title.includes("공항"))];
+
   function inclusionBoxes(p:PlanState) {
             // accom 값 → 표시할 sub 패키지 박스 목록
             const subBoxes: { label: string; items: PkgItem[] }[] = [];
             if (p.accom === "dreamhouse_jaypark") {
-              subBoxes.push({ label: "드림하우스", items: INCLUSIONS_DH });
-              subBoxes.push({ label: "제이파크", items: INCLUSIONS_JP });
+              subBoxes.push({ label: "드림하우스", items: quoteDH });
+              subBoxes.push({ label: "제이파크", items: quoteJP });
             } else if (p.accom === "dreamhouse_cubenine") {
-              subBoxes.push({ label: "드림하우스", items: INCLUSIONS_DH });
-              subBoxes.push({ label: "큐브나인", items: INCLUSIONS_C9 });
+              subBoxes.push({ label: "드림하우스", items: quoteDH });
+              subBoxes.push({ label: "큐브나인", items: quoteC9 });
             } else if (p.accom === "jpark" || p.accom === "jaypark") {
-              subBoxes.push({ label: "제이파크 단독", items: INCLUSIONS_JP });
+              subBoxes.push({ label: "제이파크 단독", items: quoteJP });
             } else if (p.accom === "cubenine") {
-              subBoxes.push({ label: "큐브나인 단독", items: INCLUSIONS_C9 });
+              subBoxes.push({ label: "큐브나인 단독", items: quoteC9 });
             } else if (p.accom === "commute") {
               subBoxes.push({ label: "통학형", items: [...INCLUSIONS_COMMUTE.filter(it => it.title !== "통학형 안내"), { icon: "", title: "아이들 점심", desc: "학원에서 제공하는 점심 포함" }] });
             } else {
               // dreamhouse 단독
-              subBoxes.push({ label: "드림하우스 단독", items: INCLUSIONS_DH });
+              subBoxes.push({ label: "드림하우스 단독", items: quoteDH });
             }
     return subBoxes;
   }
@@ -1151,110 +1160,35 @@ export default function EstimateCalc(){
 
   /* ── 출력 카드 ── */
   function renderCard(plan:PlanState,r:ReturnType<typeof calcPlan>,label:string,onRemove?:()=>void){
-    if(!r) return(
-      <div style={{flex:1,minWidth:0,background:"#f8fafc",borderRadius:12,padding:32,textAlign:"center",color:"#94a3b8",fontSize:13,border:"1px solid #e2e8f0",position:"relative"}}>
-        {onRemove&&<button onClick={onRemove} className="no-print" style={{position:"absolute",top:8,right:8,background:"transparent",border:"none",color:"#ef4444",fontSize:18,cursor:"pointer",lineHeight:1,fontFamily:"'Noto Sans KR',sans-serif"}} title="이 안 제거">×</button>}
-        {label}: 가격 정보 없음<br/>조건을 변경해주세요.
-      </div>
-    );
-    const hasExtras=plan.extras.filter(e=>e.name&&e.amount).length>0;
-    const hasDiscounts=plan.discounts.filter(e=>e.name&&e.amount).length>0;
+    const multiple=plans.length>1;
+    const small=plans.length>=3;
+    if(!r)return <div style={{padding:16,border:"1px solid #e2e8f0",borderRadius:12,minWidth:0}}>{label}: 가격 정보 없음<br/>조건을 변경해주세요.</div>;
     const showStrike=r.listPrice!==r.finalPrice;
-    return(
-      <div style={{flex:1,minWidth:0,background:"#fff",borderRadius:12,padding:16,border:"1px solid #e2e8f0",position:"relative"}}>
-        {onRemove&&<button onClick={onRemove} className="no-print" style={{position:"absolute",top:8,right:8,background:"transparent",border:"none",color:"#ef4444",fontSize:18,cursor:"pointer",lineHeight:1,fontFamily:"'Noto Sans KR',sans-serif"}} title="이 안 제거">×</button>}
-        {/* 카드 헤더 */}
-        <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"4px 12px",textAlign:"left",marginBottom:8,paddingBottom:8,borderBottom:"2px solid #1a6fc4"}}>
-          <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e",marginBottom:4}}>{label}</div>
-          <div style={{fontSize:13,fontWeight:600,color:"#1a6fc4",marginBottom:4}}>{planName(plan)} · 총 {totalWeeks(plan)}주</div>
-          {plan.checkin && (
-            <div style={{fontSize:12,color:"#475569",marginBottom:4}}>{plan.accom==="commute"?"수업시작":"체크인"}: {plan.checkin} / {plan.accom==="commute"?"수업종료":"체크아웃"}: {calcCheckout(plan.checkin,totalWeeks(plan),plan.accom==="commute")}</div>
-          )}
-          <div style={{marginBottom:4}}>{seasonBadge(plan.season)}</div>
-          <div style={{fontSize:12,color:"#6b7c93"}}>{plan.accom!=="commute" ? `보호자 ${plan.parents}명 + 아이 ${plan.kids}명` : `아이 ${plan.kids}명`}</div>
-        </div>
-
-        {/* 콤보 숙소별 내역 */}
-        {r.breakdown && (
-          <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 12px",marginBottom:10}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"4px 0",fontSize:13}}>
-              <span style={{color:"#374151"}}>
-                {r.breakdown.dh.label} {r.breakdown.dh.room} <span style={{color:"#94a3b8",fontWeight:500}}>· {r.breakdown.dh.weeks}주</span>
-              </span>
-              <span style={{fontWeight:700,color:"#1a1a2e"}}>{won(r.breakdown.dh.price)}</span>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"4px 0",fontSize:13}}>
-              <span style={{color:"#374151"}}>
-                {r.breakdown.sub.label} {r.breakdown.sub.label==="제이파크"?r.breakdown.sub.room+" 가든뷰":r.breakdown.sub.room} <span style={{color:"#94a3b8",fontWeight:500}}>· {r.breakdown.sub.weeks}주</span>
-              </span>
-              <span style={{fontWeight:700,color:"#1a1a2e"}}>{won(r.breakdown.sub.price)}</span>
-            </div>
-            <div style={{marginTop:4,fontSize:10.5,color:"#94a3b8",textAlign:"right"}}>
-              주당 단가 = 해당 숙소 {totalWeeks(plan)}주 금액 ÷ {totalWeeks(plan)}
-            </div>
-          </div>
-        )}
-
-        {/* 정가 취소선 */}
-        {showStrike&&(
-          <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:13}}>
-            <span style={{color:"#94a3b8"}}>정가</span>
-            <span style={{textDecoration:"line-through",color:"#94a3b8"}}>{won(r.listPrice)}</span>
-          </div>
-        )}
-
-        {/* 시즌가 */}
-        <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:14}}>
-          <span style={{color:"#374151"}}>{r.mix?`혼합 시즌 (비수기 ${r.mix.off}주 + 성수기 ${r.mix.peak}주)`:seasonLabel[plan.season]+" 가격"}</span>
-          <span style={{fontWeight:600,color:"#1a1a2e"}}>{won(r.seasonPrice)}</span>
-        </div>
-        {plan.discounts.some(d=>d.name.startsWith("학원 방학 수업료 제외"))&&(
-          <div style={{margin:"6px 0",padding:"7px 11px",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,fontSize:11.5,color:"#1e40af",fontWeight:600}}>
-            🏫 이 견적 기간에 학원 <b>방학(휴무일)</b>이 포함되어 아래에 <b>수업료 차감</b>이 자동 반영되었어요.
-          </div>
-        )}
-
-        {/* 추가항목 */}
-        {hasExtras&&<>
-          {plan.extras.filter(e=>e.name&&e.amount).map((e,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:13}}>
-              <span style={{color:"#6b7c93"}}>+ {e.name}</span>
-              <span style={{color:"#1a6fc4",fontWeight:600}}>+{won(e.amount)}</span>
-            </div>
-          ))}
-        </>}
-
-        {/* 구분선 */}
-        {(hasExtras||hasDiscounts)&&<div style={{borderTop:"1px dashed #e2e8f0",margin:"8px 0"}}/>}
-
-        {/* 할인항목 */}
-        {hasDiscounts&&<>
-          {plan.discounts.filter(e=>e.name&&e.amount).map((e,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:13}}>
-              <span style={{color:"#6b7c93"}}>- {e.name}</span>
-              <span style={{color:"#dc2626",fontWeight:600}}>-{won(e.amount)}</span>
-            </div>
-          ))}
-          <div style={{borderTop:"1px dashed #e2e8f0",margin:"8px 0"}}/>
-        </>}
-
-        {/* 최종가 */}
-        <div style={{borderTop:"2px solid #1a1a2e",marginTop:6,paddingTop:8}}>
-          <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between",alignItems:"baseline",gap:4}}>
-            <span style={{fontSize:14,fontWeight:700,color:"#1a1a2e"}}>최종 견적 금액</span>
-            <span style={{fontSize:28,fontWeight:800,color:"#1a6fc4",whiteSpace:"nowrap"}}>{won(r.finalPrice)}</span>
-          </div>
-          {r.saving>0&&(
-            <div style={{textAlign:"right",marginTop:4,fontSize:12,fontWeight:600,color:"#059669"}}>
-              정가 대비 {won(r.saving)} 할인
-            </div>
-          )}
-        </div>
-        {plan.extras.some(x=>x.name.startsWith(JP_GALA_PREFIX))&&(
-          <div style={{marginTop:8,fontSize:11,color:"#9a3412"}}>※ 제이파크 12/31 갈라디너: 성인(13세↑) ₱5,500 · 어린이(7~12세) ₱2,750 · 0~6세 무료 — 아이 나이에 따라 금액이 달라질 수 있어요 (환율: 매매기준율+0.6원 = 1페소 {fxRate}원)</div>
-        )}
+    const detailSize=small?11:12;
+    return <div style={{flex:1,minWidth:0,border:"1px solid #dfe5ee",borderRadius:12,padding:multiple?"12px 9px":"16px 22px",textAlign:"center",position:"relative",display:"flex",flexDirection:"column",background:"#fff"}}>
+      {onRemove&&<button className="no-print" title="이 안 제거" onClick={onRemove} style={{position:"absolute",right:7,top:5,border:0,background:"none",color:"#94a3b8",fontSize:18,cursor:"pointer"}}>×</button>}
+      <div style={{minHeight:multiple?174:undefined,display:"flex",flexDirection:"column",alignItems:"center"}}>
+        <div style={{fontSize:17,fontWeight:800,margin:"4px 0 12px"}}>{label}</div>
+        <div style={{fontSize:13,fontWeight:700,color:"#496ec5",lineHeight:1.6}}>{planName(plan)}<br/>총 {totalWeeks(plan)}주</div>
+        {plan.checkin&&<div style={{fontSize:10,color:"#7c89a2",marginTop:7,lineHeight:1.6}}>{plan.accom==="commute"?"수업":"숙박"}: {plan.checkin}<br/>~ {calcCheckout(plan.checkin,totalWeeks(plan),plan.accom==="commute")}</div>}
+        <div style={{margin:"10px 0"}}>{seasonBadge(plan.season)}</div>
+        <div style={{fontSize:11,color:"#7c89a2"}}>{plan.accom==="commute"?`아이 ${plan.kids}명`:<>{`보호자 ${plan.parents}명`}{multiple?<br/>:" · "}{`아이 ${plan.kids}명`}</>}</div>
       </div>
-    );
+      <div style={{borderTop:"2px solid #4d6fc6",marginTop:12,paddingTop:12,flex:1,fontSize:detailSize}}>
+        {(showStrike||multiple)&&<div style={{minHeight:36,color:"#98a3b7",fontSize:11}}>{showStrike&&<>정가<br/><s>{won(r.listPrice)}</s></>}</div>}
+        <div style={{color:"#68758b",fontSize:11}}>{r.mix?`혼합 시즌 (비수기 ${r.mix.off}주 + 성수기 ${r.mix.peak}주)`:seasonLabel[plan.season]+" 가격"}</div>
+        <div style={{fontWeight:600,margin:"4px 0 14px",overflowWrap:"anywhere"}}>{won(r.seasonPrice)}</div>
+        {r.breakdown&&<div style={{background:"#f5f7fb",padding:7,borderRadius:7,fontSize:10,lineHeight:1.7,marginBottom:8}}><div>{r.breakdown.dh.label} {r.breakdown.dh.room} · {r.breakdown.dh.weeks}주<br/>{won(r.breakdown.dh.price)}</div><div>{r.breakdown.sub.label} {r.breakdown.sub.room} · {r.breakdown.sub.weeks}주<br/>{won(r.breakdown.sub.price)}</div></div>}
+        {plan.extras.filter(e=>e.name&&e.amount).map((e,i)=><div key={i} style={{color:"#496ec5",fontSize:11,marginBottom:7}}>+ {e.name}<br/>+{won(e.amount)}</div>)}
+        {plan.discounts.filter(e=>e.name&&e.amount).map((e,i)=><div key={i} style={{color:"#c03932",fontSize:11,marginBottom:7}}>- {e.name}<br/>-{won(e.amount)}</div>)}
+      </div>
+      <div style={{borderTop:"2px solid #263047",paddingTop:12}}>
+        <div style={{fontSize:12,fontWeight:700}}>최종 견적 금액</div>
+        <div style={{fontSize:small?"clamp(11px,3.6cqw,20px)":multiple?"clamp(18px,4.8cqw,25px)":28,fontWeight:800,color:"#4c70c8",whiteSpace:"nowrap",margin:"10px 0"}}>{won(r.finalPrice)}</div>
+        {(r.saving>0||multiple)&&<div style={{minHeight:multiple?32:undefined,fontSize:11,color:"#389769",lineHeight:1.6}}>{r.saving>0&&<>정가 대비{multiple?<br/>:" "}{won(r.saving)} 할인</>}</div>}
+      </div>
+      {plan.extras.some(x=>x.name.startsWith(JP_GALA_PREFIX))&&<div style={{marginTop:8,fontSize:10,color:"#9a3412"}}>※ 제이파크 12/31 갈라디너: 성인(13세↑) ₱5,500 · 어린이(7~12세) ₱2,750 · 0~6세 무료. 나이별 금액 적용 (1페소 {fxRate}원)</div>}
+    </div>;
   }
 
   return(
@@ -1279,37 +1213,16 @@ export default function EstimateCalc(){
       </div>
 
       {/* ── 출력 ── */}
-      <div id="estimate-result" ref={resultRef} style={{background:"#fff",width:"100%",maxWidth:560,boxSizing:"border-box",margin:"0 auto",borderRadius:14,padding:16,color:"#1e2a3a",lineHeight:1.65,overflowWrap:"anywhere",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
+      <div id="estimate-result" ref={resultRef} style={{containerType:"inline-size",wordBreak:"keep-all",background:"#fff",width:"100%",maxWidth:560,boxSizing:"border-box",margin:"0 auto",borderRadius:14,padding:16,color:"#1e2a3a",lineHeight:1.65,overflowWrap:"anywhere",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
         <div style={{textAlign:"left",marginBottom:12,paddingBottom:10,borderBottom:"1px solid #e2e8f0"}}>
           <div style={{fontSize:22,fontWeight:800,color:"#1e2a3a",letterSpacing:"-0.02em",marginBottom:2}}><span style={{color:"#2e6bd6"}}>D</span>ream <span style={{color:"#f0b429"}}>A</span>cademy</div>
           <div style={{fontSize:16,fontWeight:700,color:"#1a1a2e",marginBottom:6}}>우리 가족 맞춤 견적서</div>
           <div style={{fontSize:11,color:"#94a3b8"}}>발행일: {todayFmt}</div>
         </div>
 
-        {plans.length>1 ? <table aria-label="견적안 비교" style={{width:"100%",tableLayout:"fixed",borderCollapse:"collapse",fontSize:12,lineHeight:1.5,marginBottom:12}}>
-          <thead><tr><th style={{width:48,padding:"8px 3px",background:"#eef3fc"}}>항목</th>{plans.map((p,i)=><th key={i} style={{padding:"8px 3px",background:"#eef3fc",color:"#1a6fc4"}}>{i+1}안 {i>0&&<button className="no-print" title="이 안 제거" onClick={()=>setPlans(prev=>prev.filter((_,n)=>n!==i))} style={{border:0,background:"none",color:"#94a3b8",padding:2}}>×</button>}</th>)}</tr></thead>
-          <tbody>{[
-            {label:"숙소·객실",values:plans.map(p=>planName(p))},
-            {label:"기간",values:plans.map(p=>totalWeeks(p)+"주")},
-            {label:"시작일",values:plans.map(p=>p.checkin||"미정")},
-            {label:"종료일",values:plans.map(p=>p.checkin?calcCheckout(p.checkin,totalWeeks(p),p.accom==="commute"):"미정")},
-            {label:"인원",values:plans.map(p=>p.accom==="commute"?`아이 ${p.kids}명`:`보호자 ${p.parents}명 · 아이 ${p.kids}명`)},
-            {label:"시즌",values:plans.map(p=>{const r=calcPlan(p);return r?.mix?`비수기 ${r.mix.off}주 / 성수기 ${r.mix.peak}주`:seasonLabel[p.season]})},
-            {label:"정가",values:plans.map(p=>{const r=calcPlan(p);return r?won(r.listPrice):"가격 없음"})},
-            {label:"시즌가",values:plans.map(p=>{const r=calcPlan(p);return r?won(r.seasonPrice):"—"})},
-            ...(plans.some(p=>p.extras.some(e=>e.name&&e.amount))?[{label:"추가",values:plans.map(p=>p.extras.filter(e=>e.name&&e.amount).map(e=>e.name+" +"+won(e.amount)).join(" / ")||"—")}]:[]),
-            ...(plans.some(p=>p.discounts.some(e=>e.name&&e.amount))?[{label:"차감",values:plans.map(p=>p.discounts.filter(e=>e.name&&e.amount).map(e=>e.name+" -"+won(e.amount)).join(" / ")||"—")}]:[]),
-            {label:"최종 금액",values:plans.map(p=>{const r=calcPlan(p);return r?won(r.finalPrice):"가격 없음"}),final:true},
-          ].map(row=><tr key={row.label} style={{background:row.final?"#edf4ff":"#fff",fontWeight:row.final?800:400,color:row.final?"#1a6fc4":"#334155"}}><th style={{padding:"8px 3px",borderBottom:"1px solid #e2e8f0",fontSize:11}}>{row.label}</th>{row.values.map((v,i)=><td key={i} style={{padding:"8px 4px",textAlign:"center",borderBottom:"1px solid #e2e8f0",borderLeft:"1px solid #edf1f7",overflowWrap:"anywhere",fontSize:row.final?12:11}}>{v}</td>)}</tr>)}</tbody>
-        </table> : <>        <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:12}}>
-          {plans.map((p,i)=>{
-            const r=calcPlan(p);
-            const onRemove=i>=1?()=>setPlans(prev=>prev.filter((_,idx)=>idx!==i)):undefined;
-            return <div key={i} style={{minWidth:0,display:"flex"}}>{renderCard(p,r,`${i+1}안`,onRemove)}</div>;
-          })}
+        <div aria-label="견적안 비교" style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(plans.length,3)},minmax(0,1fr))`,gap:8,marginBottom:12,alignItems:"stretch"}}>
+          {plans.map((p,i)=><div key={i} style={{minWidth:0,display:"flex"}}>{renderCard(p,calcPlan(p),`${i+1}안`,i>0?()=>setPlans(prev=>prev.filter((_,n)=>n!==i)):undefined)}</div>)}
         </div>
-
-</>}
 
         {/* 패키지 포함/불포함 박스 영역 */}
         <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:12,marginBottom:12}}>
