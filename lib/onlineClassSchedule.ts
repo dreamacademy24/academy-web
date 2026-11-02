@@ -1,11 +1,13 @@
 // 화상영어 세션 날짜 계산 — 성수기(방학)·휴일·주말은 수업 없음 (2026-08-28)
 // 성수기 = 아카데미 집중 운영(방학) 기간 → 화상영어 일시 중단
-// 규칙은 견적 isPeak와 동일하게 유지
+// 화상영어 운영 휴무는 숙박 요금 성수기와 별도: 2026년 마지막 수업 12/23.
 
 export function isPeakVacation(dateStr: string): boolean {
   if (!dateStr) return false;
   const dt = new Date(dateStr + "T00:00:00");
   const y = dt.getFullYear(), m = dt.getMonth() + 1, day = dt.getDate();
+  if (m === 1 || m === 2) return true; // 윤년 2/29도 포함
+  if (y === 2026 && m === 12) return day >= 24;
   if (y === 2027) return (m === 7 && day >= 18) || (m === 8 && day <= 30) || (m === 12 && day >= 19) || m === 1 || m === 2;
   if (y === 2028) return m === 1 || (m === 2 && day <= 28) || (m === 7 && day >= 15) || m === 8 || (m === 12 && day >= 15);
   return (m === 7 && day >= 15) || m === 8 || (m === 12 && day >= 15) || m === 1 || m === 2;
