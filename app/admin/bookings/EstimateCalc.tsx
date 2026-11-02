@@ -959,9 +959,9 @@ export default function EstimateCalc(){
     const el=resultRef.current;
     if(!el) return;
     await document.fonts.ready;
-    const canvas=await html2canvas(el,{scale:3,width:420,backgroundColor:"#ffffff",useCORS:true,
+    const canvas=await html2canvas(el,{scale:3,width:560,backgroundColor:"#ffffff",useCORS:true,
       ignoreElements:node=>node.classList.contains("no-print"),
-      onclone:doc=>{const sheet=doc.getElementById("estimate-result");if(sheet){sheet.style.width="420px";sheet.style.maxWidth="none";sheet.style.margin="0";}}
+      onclone:doc=>{const sheet=doc.getElementById("estimate-result");if(sheet){sheet.style.width="560px";sheet.style.maxWidth="none";sheet.style.margin="0";}}
     });
     const link=document.createElement("a");
     link.download=`dream_estimate_${todayFile}.png`;
@@ -1131,10 +1131,10 @@ export default function EstimateCalc(){
     const hasDiscounts=plan.discounts.filter(e=>e.name&&e.amount).length>0;
     const showStrike=r.listPrice!==r.finalPrice;
     return(
-      <div style={{flex:1,minWidth:0,background:"#fff",borderRadius:12,padding:24,border:"1px solid #e2e8f0",position:"relative"}}>
+      <div style={{flex:1,minWidth:0,background:"#fff",borderRadius:12,padding:16,border:"1px solid #e2e8f0",position:"relative"}}>
         {onRemove&&<button onClick={onRemove} className="no-print" style={{position:"absolute",top:8,right:8,background:"transparent",border:"none",color:"#ef4444",fontSize:18,cursor:"pointer",lineHeight:1,fontFamily:"'Noto Sans KR',sans-serif"}} title="이 안 제거">×</button>}
         {/* 카드 헤더 */}
-        <div style={{textAlign:"center",marginBottom:16,paddingBottom:14,borderBottom:"2px solid #1a6fc4"}}>
+        <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"4px 12px",textAlign:"left",marginBottom:8,paddingBottom:8,borderBottom:"2px solid #1a6fc4"}}>
           <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e",marginBottom:4}}>{label}</div>
           <div style={{fontSize:13,fontWeight:600,color:"#1a6fc4",marginBottom:4}}>{planName(plan)} · 총 {totalWeeks(plan)}주</div>
           {plan.checkin && (
@@ -1209,8 +1209,8 @@ export default function EstimateCalc(){
         </>}
 
         {/* 최종가 */}
-        <div style={{borderTop:"2px solid #1a1a2e",marginTop:6,paddingTop:14}}>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:4}}>
+        <div style={{borderTop:"2px solid #1a1a2e",marginTop:6,paddingTop:8}}>
+          <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between",alignItems:"baseline",gap:4}}>
             <span style={{fontSize:14,fontWeight:700,color:"#1a1a2e"}}>최종 견적 금액</span>
             <span style={{fontSize:28,fontWeight:800,color:"#1a6fc4",whiteSpace:"nowrap"}}>{won(r.finalPrice)}</span>
           </div>
@@ -1249,14 +1249,14 @@ export default function EstimateCalc(){
       </div>
 
       {/* ── 출력 ── */}
-      <div id="estimate-result" ref={resultRef} style={{background:"#fff",width:"100%",maxWidth:420,boxSizing:"border-box",margin:"0 auto",borderRadius:14,padding:16,color:"#1e2a3a",lineHeight:1.65,overflowWrap:"anywhere",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
-        <div style={{textAlign:"left",marginBottom:22,paddingBottom:18,borderBottom:"1px solid #e2e8f0"}}>
+      <div id="estimate-result" ref={resultRef} style={{background:"#fff",width:"100%",maxWidth:560,boxSizing:"border-box",margin:"0 auto",borderRadius:14,padding:16,color:"#1e2a3a",lineHeight:1.65,overflowWrap:"anywhere",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
+        <div style={{textAlign:"left",marginBottom:12,paddingBottom:10,borderBottom:"1px solid #e2e8f0"}}>
           <div style={{fontSize:22,fontWeight:800,color:"#1e2a3a",letterSpacing:"-0.02em",marginBottom:2}}><span style={{color:"#2e6bd6"}}>D</span>ream <span style={{color:"#f0b429"}}>A</span>cademy</div>
           <div style={{fontSize:16,fontWeight:700,color:"#1a1a2e",marginBottom:6}}>우리 가족 맞춤 견적서</div>
           <div style={{fontSize:11,color:"#94a3b8"}}>발행일: {todayFmt}</div>
         </div>
 
-        <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:20}}>
+        <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:12}}>
           {plans.map((p,i)=>{
             const r=calcPlan(p);
             const onRemove=i>=1?()=>setPlans(prev=>prev.filter((_,idx)=>idx!==i)):undefined;
@@ -1265,7 +1265,7 @@ export default function EstimateCalc(){
         </div>
 
         {/* 패키지 포함/불포함 박스 영역 */}
-        <div style={{display:"flex",flexDirection:"column",gap:16,marginTop:20,marginBottom:20}}>
+        <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:12,marginBottom:12}}>
           {plans.map((p, i) => {
             // accom 값 → 표시할 sub 패키지 박스 목록
             const subBoxes: { label: string; items: PkgItem[] }[] = [];
@@ -1280,7 +1280,7 @@ export default function EstimateCalc(){
             } else if (p.accom === "cubenine") {
               subBoxes.push({ label: "큐브나인 단독", items: INCLUSIONS_C9 });
             } else if (p.accom === "commute") {
-              subBoxes.push({ label: "통학형", items: INCLUSIONS_COMMUTE });
+              subBoxes.push({ label: "통학형", items: [...INCLUSIONS_COMMUTE.filter(it => it.title !== "통학형 안내"), { icon: "", title: "아이들 점심", desc: "학원에서 제공하는 점심 포함" }] });
             } else {
               // dreamhouse 단독
               subBoxes.push({ label: "드림하우스 단독", items: INCLUSIONS_DH });
@@ -1296,7 +1296,7 @@ export default function EstimateCalc(){
                 boxShadow:"0 1px 2px rgba(0,0,0,0.04)",
               }}>
                 <div style={{fontSize:15,fontWeight:700,marginBottom:14,color:"#111"}}>
-                  {i+1}안 · {accomLabel[p.accom]} 패키지 포함 사항
+                  포함 <span style={{fontSize:12,fontWeight:500,color:"#64748b"}}>· {i+1}안 {accomLabel[p.accom]}</span>
                 </div>
                 {subBoxes.map((box, bi) => (
                   <div key={bi} style={{marginBottom:subBoxes.length>1?14:0}}>
@@ -1305,15 +1305,14 @@ export default function EstimateCalc(){
                         · {box.label}
                       </div>
                     )}
-                    {box.items.map((it, idx) => (
-                      <div key={idx} style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
-                        <span style={{fontSize:17,lineHeight:"22px",flexShrink:0}}>{it.icon}</span>
-                        <div style={{fontSize:14,lineHeight:"23px"}}>
-                          <span style={{fontWeight:600,color:"#111"}}>{it.title}</span>
-                          {it.desc && <span style={{display:"block",color:"#6b7280"}}>{it.desc}</span>}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
+                      {box.items.map((it, idx) => (
+                        <div key={idx} style={{padding:"8px 10px",background:"#f5f8fc",borderRadius:8,minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:700,color:"#1e2a3a",lineHeight:1.5}}>{it.title}</div>
+                          {it.desc && <div style={{fontSize:12,color:"#64748b",lineHeight:1.5,marginTop:3}}>{it.desc}</div>}
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1330,7 +1329,7 @@ export default function EstimateCalc(){
             borderRadius:12,
           }}>
             <div style={{fontSize:15,fontWeight:700,marginBottom:14,color:"#991b1b"}}>
-              별도로 준비할 비용 <span style={{fontSize:12,fontWeight:500,color:"#7f1d1d"}}>(별도 비용)</span>
+              비포함 <span style={{fontSize:12,fontWeight:500,color:"#7f1d1d"}}>· 별도 준비 / 현지 지불</span>
             </div>
             {plans.some(p => p.accom === "dreamhouse" || p.accom === "dreamhouse_jaypark" || p.accom === "dreamhouse_cubenine") && (
               <div style={{marginBottom:16,padding:14,background:"#fff",border:"1px solid #fecaca",borderRadius:8,fontSize:14,lineHeight:"23px"}}>
@@ -1341,15 +1340,21 @@ export default function EstimateCalc(){
                 <div style={{color:"#6b7280",fontSize:11.5,marginTop:6}}>보증금은 위 원화 견적 금액에 포함되지 않습니다.</div>
               </div>
             )}
-            {COMMON_EXCLUSIONS.map((it, idx) => (
-              <div key={idx} style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
-                <span style={{fontSize:17,lineHeight:"22px",flexShrink:0}}>{it.icon}</span>
-                <div style={{fontSize:14,lineHeight:"23px"}}>
-                  <span style={{fontWeight:600,color:"#991b1b"}}>{it.title}</span>
-                  <span style={{display:"block",color:"#7f1d1d"}}>{it.desc}</span>
-                </div>
+            {plans.some(p => p.accom === "commute") && (
+              <div style={{marginBottom:10,padding:"10px 12px",background:"#fff",border:"1px solid #fecaca",borderRadius:8,fontSize:13,lineHeight:1.5}}>
+                <strong style={{color:"#991b1b"}}>통학형 차량비 2,000페소 · 현지 지불</strong>
+                <div style={{fontSize:12,color:"#7f1d1d",marginTop:4}}>적용: {plans.map((p,i)=>p.accom==="commute"?(i+1)+"안":null).filter(Boolean).join(", ")} · 위 원화 견적에 포함되지 않습니다.</div>
+                <div style={{fontSize:12,color:"#64748b",marginTop:3}}>통학형은 숙박·아침·저녁 식사·픽드랍이 포함되지 않습니다.</div>
               </div>
-            ))}
+            )}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
+              {COMMON_EXCLUSIONS.map((it, idx) => (
+                <div key={idx} style={{padding:"8px 10px",background:"#fff",borderRadius:8,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#991b1b",lineHeight:1.5}}>{it.title}</div>
+                  <div style={{fontSize:12,color:"#7f1d1d",lineHeight:1.5,marginTop:3}}>{it.desc}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -1371,7 +1376,7 @@ export default function EstimateCalc(){
           );
         })}
 
-        <div style={{padding:"14px 20px",background:"#f8fafc",borderRadius:10,textAlign:"center",fontSize:12,color:"#6b7c93",lineHeight:1.8}}>
+        <div style={{padding:"8px 12px",background:"#f8fafc",borderRadius:10,textAlign:"center",fontSize:12,color:"#6b7c93",lineHeight:1.8}}>
           ※ 할인 금액은 언제든 변경될 수 있습니다.
         </div>
       </div>
