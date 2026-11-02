@@ -377,7 +377,7 @@ export default function PortalCheckinDetailPage() {
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {["더블베드 1개 (1~2인 스테이)","사용하지 않음"].map(opt=>(
                     <button key={opt} type="button"
-                      onClick={()=>setBedConfig(p=>({...p,room3:opt}))}
+                      onClick={()=>setBedConfig(p=>({...p,room3:p.room3===opt?"":opt}))}
                       style={{padding:"8px 16px",borderRadius:20,border:"2px solid",fontSize:13,cursor:"pointer",
                         borderColor:bedConfig.room3===opt?"#4f6ef7":"#dde3f0",
                         background:bedConfig.room3===opt?"#4f6ef7":"#fff",

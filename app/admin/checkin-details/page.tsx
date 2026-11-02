@@ -169,7 +169,7 @@ function CheckinDetailsInner() {
               }catch{}
             }
           });
-        try { const b = JSON.parse(d.detail.bed_setting || "{}"); setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인 스테이)"}); } catch { setBedConfig({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"}); }
+        try { const b = JSON.parse(d.detail.bed_setting || "{}"); setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||""}); } catch { setBedConfig({room1:"",room2:"",room3:""}); }
         try { const arr = JSON.parse(d.detail.usim_request || "[]"); setSimCards(Array.isArray(arr) ? arr : []); } catch { setSimCards([]); }
         try { const arr = JSON.parse(d.detail.extra_pickups || "[]"); setExtraPickups(Array.isArray(arr) ? arr : []); } catch { setExtraPickups([]); }
         // 저장 상태 판별: 타임스탬프(admin_saved_at/submitted_at/localStorage) 또는
@@ -550,7 +550,7 @@ function CheckinDetailsInner() {
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {["더블베드 1개 (1~2인 스테이)","사용하지 않음"].map(opt=>(
                     <button key={opt} type="button"
-                      onClick={()=>setBedConfig(p=>({...p,room3:opt}))}
+                      onClick={()=>setBedConfig(p=>({...p,room3:p.room3===opt?"":opt}))}
                       style={{padding:"6px 14px",borderRadius:20,border:"1.5px solid",fontSize:12,cursor:"pointer",
                         borderColor:bedConfig.room3===opt?"#5b6cf8":"#ccd",
                         background:bedConfig.room3===opt?"#5b6cf8":"#fff",
