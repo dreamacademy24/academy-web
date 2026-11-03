@@ -58,6 +58,7 @@ export default function AdminHubPage() {
 
   // 카테고리 그룹 (카드 속성은 변경 없이 순서/그룹핑만)
   const groups = [
+    { title: "기타업무", cards: [{ icon: "📜", title: "Certificate 공문서", desc: "입학허가서 한글·영문 · 예약 불러오기 · 양식 편집", href: "/admin/certificates" }] },
     {
       title: "드림아카데미",
       cards: [

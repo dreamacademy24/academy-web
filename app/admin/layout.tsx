@@ -63,6 +63,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "Shuttle Schedule", href: "/ashuttle", ext: true },
   ]},
   { title: "기타 업무", items: [
+    { label: "Certificate 공문서", href: "/admin/certificates" },
     { label: "직원 가이드", href: "/staff-guide.html", ext: true },
     { label: "자료모음", href: "/admin/resources" },
     { label: "지난 내역 보관함", href: "/admin/archive" },
