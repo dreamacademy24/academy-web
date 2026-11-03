@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getStaffIdentity, portalDb } from '@/lib/portalAuth';
 import { canUseCertificates, defaultCertificateTemplate, normalizeCertificateBooking, validateCertificateData, validateCertificateTemplate, type CertificateLanguage, type CertificatePayload, type CertificateTemplate } from '@/lib/certificates';
+import { defaultSignatoryDirectory, validateSignatoryDirectory } from '@/lib/certificateSignatories';
 export const dynamic = 'force-dynamic';
 const reply = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });
 const uuid = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
@@ -29,12 +30,13 @@ export async function GET(req: Request) {
       if (error) throw error; return reply({ versions: data });
     }
     if (action !== 'load') return reply({ error: 'Unknown action.' }, 400);
-    const [ko, en, { data: documents, error: de }] = await Promise.all([
+    const [ko, en, directory, { data: documents, error: de }] = await Promise.all([
       db.from('certificate_template_versions').select('*').eq('language','ko').order('version', { ascending: false }).limit(1),
       db.from('certificate_template_versions').select('*').eq('language','en').order('version', { ascending: false }).limit(1),
+      db.from('certificate_signatory_versions').select('*').order('version',{ascending:false}).limit(1),
       db.from('certificate_document_versions').select('document_id,version,language,booking_id,student_name,reference,created_at,created_by').order('created_at', { ascending: false }).limit(100),
     ]);
-    if (ko.error || en.error || de) throw ko.error || en.error || de;
+    if (ko.error || en.error || directory.error || de) throw ko.error || en.error || directory.error || de;
     const templates = [...(ko.data || []), ...(en.data || [])];
     const latest: Record<string, unknown> = {};
     for (const language of ['ko', 'en'] as CertificateLanguage[]) {
@@ -42,7 +44,7 @@ export async function GET(req: Request) {
       latest[language] = { version: row?.version || 0, payload: row?.payload || defaultCertificateTemplate(language) };
     }
     const seen = new Set<string>();
-    return reply({ staff, templates: latest, documents: (documents || []).filter(d => { if (seen.has(d.document_id)) return false; seen.add(d.document_id); return true; }) });
+    return reply({ staff, templates: latest, directory:directory.data?.[0]||{version:0,payload:defaultSignatoryDirectory()}, documents: (documents || []).filter(d => { if (seen.has(d.document_id)) return false; seen.add(d.document_id); return true; }) });
   } catch { return reply({ error: '공문서 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요. / Could not load certificates. Please retry.' }, 503); }
 }
 export async function POST(req: Request) {
@@ -53,6 +55,13 @@ export async function POST(req: Request) {
     let body; try { body = JSON.parse(raw); } catch { return reply({ error: 'Invalid JSON.' }, 400); }
     if (!body || typeof body !== 'object') return reply({ error: 'Invalid request.' }, 400);
     const { kind, language, expectedVersion, documentId, bookingId, payload } = body;
+    if(kind==='signatories'){
+      if(!Number.isInteger(expectedVersion)||expectedVersion<0)return reply({error:'Invalid version.'},400);
+      const invalid=validateSignatoryDirectory(payload);if(invalid)return reply({error:invalid},400);
+      const {data,error}=await portalDb().rpc('save_certificate_signatory_directory',{p_expected_version:expectedVersion,p_payload:payload,p_actor:staff.username});
+      if(error?.message?.includes('CERTIFICATE_VERSION_CONFLICT'))return reply({error:'다른 직원이 등록명단을 먼저 저장했습니다. 새로고침 후 다시 수정해주세요. / The directory changed. Reload before saving.'},409);
+      if(error)throw error;return reply({saved:data});
+    }
     if (!['template', 'document'].includes(kind) || !['ko', 'en'].includes(language) || !Number.isInteger(expectedVersion) || expectedVersion < 0 || (kind === 'document' && !uuid(documentId)) || (bookingId !== null && bookingId !== undefined && !uuid(bookingId))) return reply({ error: 'Invalid version, language or document.' }, 400);
     const template: CertificateTemplate = kind === 'template' ? payload : (payload as CertificatePayload)?.template;
     let invalid = validateCertificateTemplate(template, language);

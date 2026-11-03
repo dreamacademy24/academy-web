@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { certificateHtml, defaultCertificateTemplate, emptyCertificate, REQUIRED_FIELDS, TOKENS, validateCertificateData, validateCertificateTemplate, type CertificateBooking, type CertificateData, type CertificateLanguage, type CertificatePayload, type CertificateTemplate } from '@/lib/certificates';
 import { certificatePdf } from '@/lib/certificatePdf';
 import { openStaffSignIn } from '@/lib/staffSessionClient';
+import CertificateSignatories from '@/components/CertificateSignatories';
+import {defaultSignatoryDirectory,type RegisteredSignatory} from '@/lib/certificateSignatories';
 
 type Saved = { document_id: string; version: number; language: CertificateLanguage; booking_id: string | null; student_name: string; reference: string; created_at: string; created_by: string; payload: CertificatePayload };
 type Templates = Record<CertificateLanguage, { version: number; payload: CertificateTemplate }>;
@@ -18,6 +20,7 @@ export default function CertificateWorkspace({ uiLanguage }: { uiLanguage: Certi
   const [access, setAccess] = useState<'loading' | 'ready' | 'signin' | 'forbidden' | 'error'>('loading');
   const [templates, setTemplates] = useState<Templates>(initialTemplates), [language, setLanguage] = useState<CertificateLanguage>(uiLanguage);
   const [template, setTemplate] = useState<CertificateTemplate>(() => defaultCertificateTemplate(uiLanguage));
+  const [directory,setDirectory]=useState<RegisteredSignatory[]>(defaultSignatoryDirectory),[directoryVersion,setDirectoryVersion]=useState(0);
   const [data, setData] = useState<CertificateData>(emptyCertificate), [documents, setDocuments] = useState<Saved[]>([]), [history, setHistory] = useState<Saved[]>([]);
   const [documentId, setDocumentId] = useState(''), [version, setVersion] = useState(0), [latestVersion, setLatestVersion] = useState(0), [bookingId, setBookingId] = useState<string | null>(null);
   const [q, setQ] = useState(''), [results, setResults] = useState<CertificateBooking[]>([]), [booking, setBooking] = useState<CertificateBooking | null>(null);
@@ -26,7 +29,7 @@ export default function CertificateWorkspace({ uiLanguage }: { uiLanguage: Certi
   const [origin, setOrigin] = useState(''), [previewReady, setPreviewReady] = useState(false), [overflow, setOverflow] = useState(false);
   const frame = useRef<HTMLIFrameElement>(null), busyRef = useRef(false);
   const load = useCallback(async () => {
-    try { const d = await api(); setTemplates(d.templates); setDocuments(d.documents); setAccess('ready'); return d; }
+    try { const d = await api(); setTemplates(d.templates); setDocuments(d.documents); setDirectory(d.directory.payload);setDirectoryVersion(d.directory.version);setAccess('ready'); return d; }
     catch (e) { const err = e as Error & { status?: number }; setError(err.message); setAccess(err.status === 401 ? 'signin' : err.status === 403 ? 'forbidden' : 'error'); }
   }, []);
   useEffect(() => { setOrigin(window.location.origin); setDocumentId(crypto.randomUUID()); void load().then(d => { if (d) setTemplate(d.templates[uiLanguage].payload); }); }, [load, uiLanguage]);
@@ -88,6 +91,10 @@ export default function CertificateWorkspace({ uiLanguage }: { uiLanguage: Certi
     setTemplates(ts => ({ ...ts, [language]: { version: d.saved.version, payload: d.saved.payload } }));
     setMessage(tx('공용 양식을 새 버전으로 저장했습니다. 기존 발급본은 유지됩니다.', 'Shared form saved as a new revision. Existing documents retain their original form.'));
   }); }
+  async function saveDirectory(rows:RegisteredSignatory[]){await run(async()=>{
+    const d=await api('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'signatories',expectedVersion:directoryVersion,payload:rows})});
+    setDirectory(d.saved.payload);setDirectoryVersion(d.saved.version);setMessage(tx('담당자 등록명단을 저장했습니다. 기존 발급본은 유지됩니다.','Signatory directory saved. Existing letters retain their original names and positions.'));
+  });}
   async function readySheet() {
     validation();
     if (!previewReady || !frame.current?.contentDocument) throw new Error(tx('미리보기가 준비될 때까지 기다려주세요.', 'Please wait for the preview.'));
@@ -134,10 +141,11 @@ export default function CertificateWorkspace({ uiLanguage }: { uiLanguage: Certi
       {(['body','closing'] as const).map((key, i) => <label key={key}>{tx(i ? '발급 목적 문구' : '입학허가 본문', i ? 'Purpose statement' : 'Admission statement')}<textarea value={template[key]} maxLength={1800} onChange={e => tf(key, e.target.value)} /></label>)}
       <p>{tx('자동입력 항목', 'Merge fields')}: {TOKENS.map(k => '{{' + k + '}}').join(' · ')}</p>
       <h2>{tx('출력 항목 · 순서 · 이름', 'Rows · Order · Labels')}</h2>{template.fields.map((f, idx) => <div className="cert-fieldrow" key={f.key}><input type="checkbox" aria-label={f.label + ' visible'} checked={f.visible} disabled={REQUIRED_FIELDS.includes(f.key)} onChange={e => tf('fields', template.fields.map((x,i) => i === idx ? { ...x, visible: e.target.checked } : x))} /><input type="text" aria-label={f.key + ' label'} value={f.label} maxLength={100} onChange={e => tf('fields', template.fields.map((x,i) => i === idx ? { ...x, label: e.target.value } : x))} /><button aria-label={f.key + ' move up'} disabled={idx === 0} onClick={() => { const fields = [...template.fields]; [fields[idx-1],fields[idx]]=[fields[idx],fields[idx-1]]; tf('fields', fields); }}>↑</button><button aria-label={f.key + ' move down'} disabled={idx === template.fields.length - 1} onClick={() => { const fields = [...template.fields]; [fields[idx+1],fields[idx]]=[fields[idx],fields[idx+1]]; tf('fields', fields); }}>↓</button></div>)}
-      <h2 style={{marginTop:20}}>{tx('서명 담당자', 'Signatories')}</h2>{template.signers.map((s, idx) => <div className="cert-pair" key={idx}><label>{tx('이름', 'Name')} {idx+1}<input value={s.name} maxLength={80} onChange={e => tf('signers', template.signers.map((x,i) => i === idx ? { ...x,name:e.target.value } : x))}/></label><label>{tx('직책', 'Position')}<input value={s.position} maxLength={100} onChange={e => tf('signers', template.signers.map((x,i) => i === idx ? { ...x,position:e.target.value } : x))}/></label></div>)}
+      <p>{tx('서명 담당자는 아래의 등록명단에서 선택합니다. 공용 양식을 저장하면 현재 선택도 새 문서의 기본값으로 저장됩니다.','Select signatories from the registered directory below. Saving the shared form also saves this selection as the default for new letters.')}</p>
       <div className="cert-pair"><label>{tx('글자 크기', 'Font size')}<input type="number" min={9} max={13} step={.5} value={template.fontSize} onChange={e => tf('fontSize', Number(e.target.value))}/></label><label>{tx('D 워터마크 농도', 'D watermark opacity')}<input type="number" min={.02} max={.08} step={.005} value={template.watermarkOpacity} onChange={e => tf('watermarkOpacity', Number(e.target.value))}/></label></div><label className="cert-check"><input type="checkbox" checked={template.watermark} onChange={e => tf('watermark',e.target.checked)}/>{tx('배경에 로고의 D 표시', 'Show the logo D in the background')}</label>
       <div className="cert-template-tools"><button className="primary" disabled={busy} onClick={saveTemplate}>{tx('공용 양식 새 버전 저장', 'Save shared form revision')}</button><button disabled={busy} onClick={() => { if (discard()) { setTemplate(defaultCertificateTemplate(language)); edited(); } }}>{tx('기본 양식으로 되돌리기', 'Load default form')}</button></div>
     </section>}
+    <CertificateSignatories language={language} uiLanguage={uiLanguage} signers={template.signers} onChange={s=>tf('signers',s)} directory={directory} directoryVersion={directoryVersion} onSave={saveDirectory} busy={busy}/>
     <section className="cert-panel"><h2>{tx('저장된 공문서', 'Saved certificates')}</h2><div className="cert-history">{documents.length ? documents.map(row => <button disabled={busy} key={row.document_id} onClick={() => openDocument(row.document_id)}><strong>{row.student_name} · {row.language.toUpperCase()} · v{row.version}</strong><br/>{row.reference}<br/>{new Date(row.created_at).toLocaleString(en ? 'en-GB' : 'ko-KR', {timeZone:'Asia/Seoul'})}</button>) : <p>{tx('저장된 문서가 없습니다.', 'No saved certificates yet.')}</p>}</div>
     {history.length > 0 && <><h2 style={{marginTop:20}}>{tx('현재 문서 버전 이력', 'Revision history')}</h2><div className="cert-history">{history.map(row => <button disabled={busy} className={version === row.version ? 'active' : ''} key={row.version} onClick={() => { if (discard()) applySaved(row,latestVersion); }}>v{row.version} · {row.created_by} · {new Date(row.created_at).toLocaleString(en ? 'en-GB' : 'ko-KR', {timeZone:'Asia/Seoul'})}</button>)}</div></>}
     </section></fieldset>
