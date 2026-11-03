@@ -796,9 +796,10 @@ function InvoicePageInner(){
   const [ex1Cnt,setEx1Cnt]=useState(0);
   const [ex2Cnt,setEx2Cnt]=useState(0);
   const [dbCheckout,setDbCheckout]=useState<string>("");
+  const [dbTransferDate,setDbTransferDate]=useState<string>("");
   const [lateCheckout,setLateCheckout]=useState(false); // 레이트 체크아웃 (12noon→22:30pm)
 
-  const a1CO=a1CI?addDays(a1CI,a1W*7):"";
+  const a1CO=a1CI?(cm==="combo"&&dbTransferDate>a1CI?dbTransferDate:addDays(a1CI,a1W*7)):"";
   const a2CI=cm==="combo"?a1CO:"";
   const a2CO=a2CI?addDays(a2CI,a2W*7):"";
 
@@ -917,7 +918,7 @@ function InvoicePageInner(){
   // 현재 폼 상태 전체를 스냅샷 객체로 수집
   // billing(=금액·할인·추가·현지지불·basePrice)·applied 등 폼 state 전체. override로 일부 키 덮어쓰기 가능
   function collectFormState(override?:Record<string,unknown>){
-    return {cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,cP,cK,ex1Cnt,ex2Cnt,dbCheckout,
+    return {cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,cP,cK,ex1Cnt,ex2Cnt,dbCheckout,dbTransferDate,
       reservationNo,reservationDate,booker,extraGuardians,students,applied,billing,checkin,adminOnly,isCommute,forceFullPayment,lateCheckout,
       receiptPayments,
       ...(override||{})};
@@ -938,6 +939,7 @@ function InvoicePageInner(){
     if(d.ex1Cnt!==undefined)setEx1Cnt(d.ex1Cnt);
     if(d.ex2Cnt!==undefined)setEx2Cnt(d.ex2Cnt);
     if(d.dbCheckout!==undefined)setDbCheckout(d.dbCheckout);
+    setDbTransferDate(d.dbTransferDate||"");
     if(d.reservationNo!==undefined)setReservationNo(d.reservationNo);
     if(d.reservationDate!==undefined)setReservationDate(d.reservationDate);
     if(d.booker!==undefined)setBooker(d.booker);
@@ -2237,6 +2239,7 @@ function InvoicePageInner(){
     </>):(<>
       <div className="f-row" style={{marginBottom:"16px"}}><div className="f-group"><label className="f-label">보호자 (공통)</label><select className="f-select" value={cP} onChange={e=>{const p=Number(e.target.value);setCP(p);setCK(Math.min(cK,Math.max(1,Math.min(mp(a1T),mp(a2T))-p)));}}>{[1,2,3,4].filter(p=>p<Math.min(mp(a1T),mp(a2T))).map(p=><option key={p} value={p}>{p}명</option>)}</select></div><div className="f-group"><label className="f-label">아이 (공통)</label><select className="f-select" value={cK} onChange={e=>setCK(Number(e.target.value))}>{Array.from({length:Math.max(1,Math.min(mp(a1T),mp(a2T))-cP)},(_,i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div></div>
       {rSel(a1T,setA1T,a1R,setA1R,a1W,setA1W,a1CI,setA1CI,a1CO,"숙소 A")}
+      <div className="f-group" style={{marginTop:12}}><label className="f-label" htmlFor="invoice-transfer-date">숙소 이동일 (추가 숙박 시 수정)</label><div style={{display:"flex",gap:8}}><input id="invoice-transfer-date" className="f-input" type="date" min={a1CI?addDays(a1CI,1):undefined} value={a1CO} onChange={e=>setDbTransferDate(e.target.value)} /><button type="button" onClick={()=>setDbTransferDate("")} style={{whiteSpace:"nowrap"}}>자동 계산</button></div><p style={{fontSize:12,color:"#64748b"}}>숙소 A 체크아웃과 숙소 B 체크인에 함께 적용됩니다. 추가 숙박 금액은 청구 내역에서 별도로 입력하세요.</p></div>
       <div className="ex-box"><div className="ex-title">숙소 A 추가 인원 (1주일 고정 · {fmt(extraRate(a1T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex1Cnt} onChange={e=>setEx1Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex1Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a1T)*ex1Cnt)}원</div>}</div></div>
       <div className="cp">+</div>
       <div style={{position:"relative"}}>
