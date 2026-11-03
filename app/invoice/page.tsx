@@ -1060,6 +1060,8 @@ function InvoicePageInner(){
 
   /* ── 학생 academyStart 자동동기화 (다음 월요일) — academyEnd는 DB값 우선 보존 ── */
   useEffect(()=>{
+    // Saved bookings retain each student's explicit school schedule.
+    if(bookingId) return;
     // 드하 단독(숙소만, 아카데미 미등록): 아카데미 날짜 자동값 없음 + 이미 채워진 자동값 제거
     if(dhOnly&&!acadOpt){
       setStudents(prev=>prev.some(s=>s.academyStart||s.academyEnd)?prev.map(s=>({...s,academyStart:"",academyEnd:""})):prev);
@@ -1354,6 +1356,8 @@ function InvoicePageInner(){
 
   /* ── 숙소 기간 → 학생 기간 자동동기화 — academyEnd는 DB값 우선 보존 ── */
   useEffect(()=>{
+    // Saved bookings retain each student's explicit school schedule.
+    if(bookingId) return;
     const totalWeeks=cm==="combo"?a1W+a2W:a1W;
     setStudents(prev=>prev.map(s=>({
       ...s,
@@ -1364,6 +1368,8 @@ function InvoicePageInner(){
 
   /* ── 첫 번째 학생 시작일/기간 → 나머지 학생 자동복사 ── */
   useEffect(()=>{
+    // Saved bookings retain each student's explicit school schedule.
+    if(bookingId) return;
     if(students.length<2) return;
     const first=students[0];
     setStudents(prev=>prev.map((s,i)=>i===0?s:{
