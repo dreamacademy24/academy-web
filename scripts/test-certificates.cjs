@@ -21,9 +21,9 @@ assert.equal(c.canUseCertificates(null),false);
 const data={...c.emptyCertificate(),reference:'TEST-ADM-EN',issueDate:'2026-11-03',studentNameKo:'학생',studentNameEn:'TEST STUDENT',studentDob:'2015-03-01',guardianNameKo:'보호자',guardianNameEn:'TEST GUARDIAN',guardianDob:'1980-12-20',programKo:'영어연수',programEn:'English Language Training',startDate:'2027-01-04',endDate:'2027-01-29'};
 for(const language of ['ko','en']){
  const template=c.defaultCertificateTemplate(language);assert.equal(c.validateCertificateTemplate(template,language),null);assert.equal(c.validateCertificateData(data,language),null);
- const html=c.certificateHtml({data,template},language,'https://example.com');assert(html.includes('1980'));assert(html.includes('2015'));assert(html.includes('dream-academy-logo.png'));assert(html.includes('watermark'));if(language==='en')assert(!/[가-힣]/.test(html));
+ const html=c.certificateHtml({data,template},language,'https://example.com');assert(!html.includes('Guardian Date of Birth'));assert(html.includes('2015'));assert(html.includes('dream-academy-logo.png'));assert(html.includes('watermark'));if(language==='en')assert(!/[가-힣]/.test(html));
 }
-assert(c.validateCertificateData({...data,guardianDob:''},'en'));
+assert.equal(c.validateCertificateData({...data,guardianDob:''},'en'),null);
 assert(c.validateCertificateData({...data,endDate:'2027-01-01'},'en'));
 assert(c.validateCertificateData({...data,studentDob:'2015-02-30'},'en'));
 assert(c.validateCertificateData({...data,schedule:'월요일'},'en'));

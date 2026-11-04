@@ -133,7 +133,7 @@ export default function CertificateWorkspace({ uiLanguage }: { uiLanguage: Certi
     <section className="cert-panel"><h2>{tx('3. 발급 내용', '3. Certificate details')}</h2>
       {input('reference', '발급번호', 'Reference number')}{input('issueDate', '발급일', 'Date of issue', 'date')}
       <div className="cert-pair">{input('studentNameKo', '학생 한글 이름', 'Student Korean name')}{input('studentNameEn', '학생 영문 이름', 'Student English name')}</div>{input('studentDob', '학생 생년월일', 'Student date of birth', 'date')}
-      <div className="cert-pair">{input('guardianNameKo', '보호자 한글 이름', 'Guardian Korean name')}{input('guardianNameEn', '보호자 영문 이름', 'Guardian English name')}</div>{input('guardianDob', '보호자 생년월일', 'Guardian date of birth', 'date')}
+      <div className="cert-pair">{input('guardianNameKo', '보호자 한글 이름', 'Guardian Korean name')}{input('guardianNameEn', '보호자 영문 이름', 'Guardian English name')}</div>
       {input('programKo', '과정 한글명', 'Program in Korean')}{input('programEn', '과정 영문명', 'Program in English')}
       <div className="cert-pair">{input('stayStartDate', '체류 시작일', 'Stay start', 'date')}{input('stayEndDate', '체류 종료일', 'Stay end', 'date')}</div>
       {!template.fields.some(f=>f.key==='stayPeriod') && <button type="button" onClick={()=>{tf('fields',template.fields.flatMap(f=>f.key==='period'?[{...f,label:language==='en'?'Class Period':'수업 기간'},{key:'stayPeriod',label:language==='en'?'Stay Period':'체류 기간',visible:true}]:[f]));}}>{tx('체류 기간 출력 항목 추가','Add stay period row')}</button>}

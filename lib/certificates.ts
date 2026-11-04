@@ -15,7 +15,7 @@ export type CertificateTemplate = {
   fields: CertificateField[]; fontSize: number; watermark: boolean; watermarkOpacity: number;
 };
 export type CertificatePayload = { data: CertificateData; template: CertificateTemplate };
-export const REQUIRED_FIELDS = ['studentName', 'studentDob', 'guardianName', 'guardianDob', 'program', 'period'];
+export const REQUIRED_FIELDS = ['studentName', 'studentDob', 'guardianName', 'program', 'period'];
 export const TOKENS = ['studentName', 'studentDob', 'guardianName', 'guardianDob', 'program', 'startDate', 'endDate', 'stayStartDate', 'stayEndDate', 'reference', 'issueDate'];
 export const todaySeoul = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 export function emptyCertificate(): CertificateData {
@@ -47,7 +47,8 @@ const dateValid = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(
 export function validateCertificateData(d: CertificateData, language: CertificateLanguage): string | null {
   if (!d || Object.values(d).some(v => typeof v !== 'string' || v.length > 500)) return 'Invalid certificate fields.';
   for (const key of ['reference', language === 'en' ? 'studentNameEn' : 'studentNameKo', language === 'en' ? 'guardianNameEn' : 'guardianNameKo', language === 'en' ? 'programEn' : 'programKo'] as const) if (!d[key]?.trim()) return '학생·보호자 이름, 과정과 발급번호를 입력해주세요. / Enter names, program and reference number.';
-  for (const key of ['studentDob', 'guardianDob', 'startDate', 'endDate', 'issueDate'] as const) if (!dateValid(d[key])) return '생년월일·연수 기간·발급일을 확인해주세요. / Check all dates.';
+  for (const key of ['studentDob', 'startDate', 'endDate', 'issueDate'] as const) if (!dateValid(d[key])) return '생년월일·연수 기간·발급일을 확인해주세요. / Check all dates.';
+  if (d.guardianDob && !dateValid(d.guardianDob)) return '보호자 생년월일을 확인해주세요. / Check guardian date of birth.';
   if ((d.stayStartDate || d.stayEndDate) && (!dateValid(d.stayStartDate || '') || !dateValid(d.stayEndDate || '') || d.stayEndDate! < d.stayStartDate!)) return '체류 기간을 확인해주세요. / Check the stay dates.';
   if (d.endDate < d.startDate || d.studentDob > d.issueDate || d.guardianDob > d.issueDate) return '날짜 순서를 확인해주세요. / Check date order.';
   if (language === 'en' && [d.studentNameEn, d.guardianNameEn, d.programEn, d.reference, d.gender, d.nationality, d.homeSchool, d.schedule].some(v => /[가-힣]/.test(v))) return '영문 서류에는 영문 내용을 입력해주세요. / Use English in the English letter.';
