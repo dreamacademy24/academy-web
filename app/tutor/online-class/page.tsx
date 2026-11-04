@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import StudentInvoiceCalendar from "@/components/StudentInvoiceCalendar";
+import OnlineApplicationInbox from '@/components/OnlineApplicationInbox';
 
 // Admin can view other teachers' dashboards (?tutor= / select)
 
@@ -324,6 +325,7 @@ function Inner() {
         <a href="/admineng/hub" className="hub">← Hub</a>
       </div>
 
+      <OnlineApplicationInbox teacherMode tutorId={tutor?.id} onAssigned={()=>{void loadOpenStudents();void loadEnrollments();}} />
       {!tutor ? (
         <div>
           <div style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", borderRadius: 16, padding: "22px 26px", color: "#fff", marginBottom: 18 }}>
