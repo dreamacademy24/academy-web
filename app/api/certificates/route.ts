@@ -22,7 +22,10 @@ export async function GET(req: Request) {
       if (q.length < 2 || q.length > 80) return reply({ error: '검색어를 2~80자로 입력해주세요. / Enter 2–80 characters.' }, 400);
       const { data, error } = await db.rpc('certificate_search_bookings', { p_query: q });
       if (error) throw error;
-      return reply({ bookings: (data || []).map(normalizeCertificateBooking) });
+      const ids = (data || []).map((b: {id:string}) => b.id);
+      const stays = ids.length ? await db.from('bookings').select('id,checkin_date,checkout_date').in('id',ids) : {data:[],error:null};
+      if(stays.error) throw stays.error;
+      return reply({ bookings: (data || []).map((b: {id:string}) => normalizeCertificateBooking({...b,...stays.data?.find(x=>x.id===b.id)})) });
     }
     if (action === 'history') {
       const id = url.searchParams.get('documentId'); if (!uuid(id)) return reply({ error: 'Invalid document ID.' }, 400);
@@ -65,7 +68,10 @@ export async function POST(req: Request) {
     if (!['template', 'document'].includes(kind) || !['ko', 'en'].includes(language) || !Number.isInteger(expectedVersion) || expectedVersion < 0 || (kind === 'document' && !uuid(documentId)) || (bookingId !== null && bookingId !== undefined && !uuid(bookingId))) return reply({ error: 'Invalid version, language or document.' }, 400);
     const template: CertificateTemplate = kind === 'template' ? payload : (payload as CertificatePayload)?.template;
     let invalid = validateCertificateTemplate(template, language);
-    if (kind === 'document') invalid ||= validateCertificateData(payload?.data, language);
+    if (kind === 'document') {
+      invalid ||= validateCertificateData(payload?.data, language);
+      if (!invalid && template.fields.some(f=>f.key==='stayPeriod'&&f.visible) && (!payload.data.stayStartDate || !payload.data.stayEndDate)) invalid = '체류 시작일과 종료일을 입력해주세요. / Enter both stay dates.';
+    }
     if (invalid) return reply({ error: invalid }, 400);
     if (bookingId) {
       const { data, error } = await portalDb().from('bookings').select('id').eq('id', bookingId).maybeSingle();

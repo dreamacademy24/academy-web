@@ -35,3 +35,13 @@ const booking=c.normalizeCertificateBooking({id:'test',reservation_no:'DA-test',
 assert.equal(booking.students[0].dob,'2015-03-01');assert.equal(booking.students[0].endDate,'2027-01-27');assert.equal(booking.students[0].invoiceEnd,'2027-01-29');assert.equal(booking.guardians[0].dob,'');assert.equal(c.normalizeCertificateDob('11'),'');
 const generated=pdf.certificatePdf(new Uint8Array([255,216,255,217]),10,10),raw=Buffer.from(generated).toString('latin1');assert(raw.startsWith('%PDF-1.4'));const xref=Number(raw.match(/startxref\n(\d+)/)[1]);assert.equal(raw.slice(xref,xref+4),'xref');
 console.log('Certificate checks passed: access, bilingual fields, guardian DOB, dates, safe HTML, original date preservation and PDF structure.');
+
+const stayData={...data,stayStartDate:'2027-01-03',stayEndDate:'2027-01-30'};
+assert.equal(c.validateCertificateData(stayData,'en'),null);
+assert(c.validateCertificateData({...stayData,stayEndDate:'2027-01-01'},'en'));
+assert(c.validateCertificateData({...stayData,stayEndDate:''},'en'));
+const stayHtml=c.certificateHtml({data:stayData,template:c.defaultCertificateTemplate('en')},'en','https://example.com');
+assert(stayHtml.includes('Stay Period'));assert(stayHtml.includes('Class Period'));assert(stayHtml.includes('03 January 2027'));assert(stayHtml.includes('30 January 2027'));
+const stayBooking=c.normalizeCertificateBooking({checkin_date:'2027-01-03',checkout_date:'2027-01-30',academy_start:'2027-01-04',academy_end:'2027-01-29'});
+assert.equal(stayBooking.stayStartDate,'2027-01-03');assert.equal(stayBooking.startDate,'2027-01-04');
+console.log('Separate stay/class periods verified.');

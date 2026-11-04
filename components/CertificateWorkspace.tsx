@@ -58,7 +58,7 @@ export default function CertificateWorkspace({ uiLanguage }: { uiLanguage: Certi
   function chooseStudent(b: CertificateBooking, idx: number, gidx: number) {
     const s = b.students[idx], g = b.guardians[gidx];
     setBooking(b); setBookingId(b.id); setStudentIndex(idx); setGuardianIndex(gidx); setDateConfirmed(false);
-    setData(d => ({ ...d, reference: `${b.reservation}-ADM-${String(idx+1).padStart(2,'0')}-${language.toUpperCase()}`, studentNameKo: s?.nameKo || '', studentNameEn: s?.nameEn || '', studentDob: s?.dob || '', guardianNameKo: g?.nameKo || '', guardianNameEn: g?.nameEn || '', guardianDob: g?.dob || '', programKo: s?.programKo || '', programEn: s?.programEn || '', startDate: s?.startDate || b.startDate, endDate: s?.endDate || b.endDate, gender: '' }));
+    setData(d => ({ ...d, reference: `${b.reservation}-ADM-${String(idx+1).padStart(2,'0')}-${language.toUpperCase()}`, studentNameKo: s?.nameKo || '', studentNameEn: s?.nameEn || '', studentDob: s?.dob || '', guardianNameKo: g?.nameKo || '', guardianNameEn: g?.nameEn || '', guardianDob: g?.dob || '', programKo: s?.programKo || '', programEn: s?.programEn || '', stayStartDate: b.stayStartDate, stayEndDate: b.stayEndDate, startDate: s?.startDate || b.startDate, endDate: s?.endDate || b.endDate, gender: '' }));
     edited();
   }
   function pickBooking(b: CertificateBooking) {
@@ -69,6 +69,7 @@ export default function CertificateWorkspace({ uiLanguage }: { uiLanguage: Certi
   function validation() {
     const problem = validateCertificateTemplate(template, language) || validateCertificateData(data, language);
     if (problem) throw new Error(problem);
+    if(template.fields.some(f=>f.key==='stayPeriod'&&f.visible)&&(!data.stayStartDate||!data.stayEndDate)) throw new Error(tx('체류 시작일과 종료일을 입력해주세요.','Enter both stay dates.'));
     if (dateConflict && !dateConfirmed) throw new Error(tx('연수일 차이를 확인하고 아래 확인란을 체크해주세요.', 'Review the training date difference and tick the confirmation box.'));
   }
   function applySaved(row: Saved, maxVersion: number) {
@@ -113,7 +114,7 @@ export default function CertificateWorkspace({ uiLanguage }: { uiLanguage: Certi
     setMessage(tx('PDF를 저장했습니다.', 'PDF downloaded.'));
   }); }
   async function print() { await run(async () => { await readySheet(); frame.current?.contentWindow?.focus(); frame.current?.contentWindow?.print(); }); }
-  const input = (key: keyof CertificateData, ko: string, english: string, type = 'text') => <label key={key}>{tx(ko, english)}<input type={type} value={data[key]} maxLength={500} onChange={e => field(key, e.target.value)} /></label>;
+  const input = (key: keyof CertificateData, ko: string, english: string, type = 'text') => <label key={key}>{tx(ko, english)}<input type={type} value={data[key] || ''} maxLength={500} onChange={e => field(key, e.target.value)} /></label>;
   if (access !== 'ready') return <section className="cert-gate" style={{ padding: 32, maxWidth: 680, margin: 'auto' }}><h1>{tx('Certificate 공문서', 'Certificates')}</h1><p role="status">{access === 'loading' ? tx('접근 권한을 확인하고 있습니다.', 'Checking access…') : error}</p>{access === 'signin' ? <button onClick={openStaffSignIn}>{tx('로그인하고 돌아오기', 'Sign in and return')}</button> : access === 'error' ? <button onClick={() => void load()}>{tx('다시 시도', 'Retry')}</button> : access === 'forbidden' ? <a href={en ? '/admineng/hub' : '/admin/hub'}>{tx('홈으로', 'Back to home')}</a> : null}</section>;
   return <div className="cert-workspace">
     <style>{`
@@ -134,7 +135,9 @@ export default function CertificateWorkspace({ uiLanguage }: { uiLanguage: Certi
       <div className="cert-pair">{input('studentNameKo', '학생 한글 이름', 'Student Korean name')}{input('studentNameEn', '학생 영문 이름', 'Student English name')}</div>{input('studentDob', '학생 생년월일', 'Student date of birth', 'date')}
       <div className="cert-pair">{input('guardianNameKo', '보호자 한글 이름', 'Guardian Korean name')}{input('guardianNameEn', '보호자 영문 이름', 'Guardian English name')}</div>{input('guardianDob', '보호자 생년월일', 'Guardian date of birth', 'date')}
       {input('programKo', '과정 한글명', 'Program in Korean')}{input('programEn', '과정 영문명', 'Program in English')}
-      <div className="cert-pair">{input('startDate', '연수 시작일', 'Training start', 'date')}{input('endDate', '연수 종료일', 'Training end', 'date')}</div>
+      <div className="cert-pair">{input('stayStartDate', '체류 시작일', 'Stay start', 'date')}{input('stayEndDate', '체류 종료일', 'Stay end', 'date')}</div>
+      {!template.fields.some(f=>f.key==='stayPeriod') && <button type="button" onClick={()=>{tf('fields',template.fields.flatMap(f=>f.key==='period'?[{...f,label:language==='en'?'Class Period':'수업 기간'},{key:'stayPeriod',label:language==='en'?'Stay Period':'체류 기간',visible:true}]:[f]));}}>{tx('체류 기간 출력 항목 추가','Add stay period row')}</button>}
+      <div className="cert-pair">{input('startDate', '수업 시작일', 'Class start', 'date')}{input('endDate', '수업 종료일', 'Class end', 'date')}</div>
       <details><summary>{tx('선택 항목', 'Optional details')}</summary><label>{tx('성별', 'Gender')}<select value={data.gender} onChange={e => field('gender', e.target.value)}><option value="">—</option><option value="Male">{tx('남', 'Male')}</option><option value="Female">{tx('여', 'Female')}</option></select></label>{input('nationality', '국적', 'Nationality')}{input('homeSchool', '재학 학교 · 학년', 'Home school / Grade')}{input('schedule', '수업 일정', 'Class schedule')}<p>{tx('선택 항목을 출력하려면 양식 수정에서 해당 항목을 켜주세요.', 'Enable optional rows in Edit form to display them.')}</p></details>
     </section></> : <section className="cert-panel"><h2>{tx('공용 양식 수정', 'Edit the shared form')} <span className="cert-badge">v{templates[language].version}</span></h2><p>{tx('현재 문서에 바로 미리보기가 적용됩니다. 공용 양식 저장 시 다음 새 문서에도 적용됩니다. 이전 발급본은 바뀌지 않습니다.', 'Edits appear in this preview. Save the shared form to use it for new letters. Previously saved letters remain unchanged.')}</p>
       {(['title', 'academy', 'address', 'contact', 'greeting', 'referenceLabel', 'issueDateLabel', 'signatureLabel', 'stampLabel'] as const).map((key, i) => <label key={key}>{tx(['문서 제목','학원명','주소','연락처','수신 문구','발급번호 표기','발급일 표기','서명란 제목','직인 표기'][i], ['Title','Academy name','Address','Contact','Greeting','Reference label','Issue date label','Signature heading','Stamp label'][i])}<input value={template[key]} maxLength={250} onChange={e => tf(key, e.target.value)} /></label>)}

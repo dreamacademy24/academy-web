@@ -4,7 +4,7 @@ export const canUseCertificates = (s: CertificateActor | null | undefined) => !!
 export type CertificateData = {
   reference: string; issueDate: string; studentNameKo: string; studentNameEn: string;
   studentDob: string; guardianNameKo: string; guardianNameEn: string; guardianDob: string;
-  programKo: string; programEn: string; startDate: string; endDate: string;
+  programKo: string; programEn: string; startDate: string; endDate: string; stayStartDate?: string; stayEndDate?: string;
   gender: string; nationality: string; homeSchool: string; schedule: string;
 };
 export type CertificateField = { key: string; label: string; visible: boolean };
@@ -16,10 +16,10 @@ export type CertificateTemplate = {
 };
 export type CertificatePayload = { data: CertificateData; template: CertificateTemplate };
 export const REQUIRED_FIELDS = ['studentName', 'studentDob', 'guardianName', 'guardianDob', 'program', 'period'];
-export const TOKENS = ['studentName', 'studentDob', 'guardianName', 'guardianDob', 'program', 'startDate', 'endDate', 'reference', 'issueDate'];
+export const TOKENS = ['studentName', 'studentDob', 'guardianName', 'guardianDob', 'program', 'startDate', 'endDate', 'stayStartDate', 'stayEndDate', 'reference', 'issueDate'];
 export const todaySeoul = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 export function emptyCertificate(): CertificateData {
-  return { reference: '', issueDate: todaySeoul(), studentNameKo: '', studentNameEn: '', studentDob: '', guardianNameKo: '', guardianNameEn: '', guardianDob: '', programKo: '', programEn: '', startDate: '', endDate: '', gender: '', nationality: '', homeSchool: '', schedule: '' };
+  return { reference: '', issueDate: todaySeoul(), studentNameKo: '', studentNameEn: '', studentDob: '', guardianNameKo: '', guardianNameEn: '', guardianDob: '', programKo: '', programEn: '', startDate: '', endDate: '', stayStartDate: '', stayEndDate: '', gender: '', nationality: '', homeSchool: '', schedule: '' };
 }
 export function defaultCertificateTemplate(language: CertificateLanguage): CertificateTemplate {
   const en = language === 'en';
@@ -35,10 +35,10 @@ export function defaultCertificateTemplate(language: CertificateLanguage): Certi
     fields: [
       ['studentName', en ? 'Student Name' : '학생 성명'], ['studentDob', en ? 'Date of Birth' : '학생 생년월일'],
       ['guardianName', en ? 'Accompanying Parent or Guardian' : '동반 보호자 성명'], ['guardianDob', en ? 'Guardian Date of Birth' : '보호자 생년월일'],
-      ['program', en ? 'Program' : '연수 과정'], ['period', en ? 'Training Period' : '연수 기간'],
+      ['program', en ? 'Program' : '연수 과정'], ['period', en ? 'Class Period' : '수업 기간'], ['stayPeriod', en ? 'Stay Period' : '체류 기간'],
       ['gender', en ? 'Gender' : '성별'], ['nationality', en ? 'Nationality' : '국적'],
       ['homeSchool', en ? 'Home School and Grade' : '재학 학교 및 학년'], ['schedule', en ? 'Class Schedule' : '수업 일정'],
-    ].map(([key, label]) => ({ key, label, visible: REQUIRED_FIELDS.includes(key) })),
+    ].map(([key, label]) => ({ key, label, visible: REQUIRED_FIELDS.includes(key) || key === 'stayPeriod' })),
     fontSize: 11, watermark: true, watermarkOpacity: 0.035,
   };
 }
@@ -48,6 +48,7 @@ export function validateCertificateData(d: CertificateData, language: Certificat
   if (!d || Object.values(d).some(v => typeof v !== 'string' || v.length > 500)) return 'Invalid certificate fields.';
   for (const key of ['reference', language === 'en' ? 'studentNameEn' : 'studentNameKo', language === 'en' ? 'guardianNameEn' : 'guardianNameKo', language === 'en' ? 'programEn' : 'programKo'] as const) if (!d[key]?.trim()) return '학생·보호자 이름, 과정과 발급번호를 입력해주세요. / Enter names, program and reference number.';
   for (const key of ['studentDob', 'guardianDob', 'startDate', 'endDate', 'issueDate'] as const) if (!dateValid(d[key])) return '생년월일·연수 기간·발급일을 확인해주세요. / Check all dates.';
+  if ((d.stayStartDate || d.stayEndDate) && (!dateValid(d.stayStartDate || '') || !dateValid(d.stayEndDate || '') || d.stayEndDate! < d.stayStartDate!)) return '체류 기간을 확인해주세요. / Check the stay dates.';
   if (d.endDate < d.startDate || d.studentDob > d.issueDate || d.guardianDob > d.issueDate) return '날짜 순서를 확인해주세요. / Check date order.';
   if (language === 'en' && [d.studentNameEn, d.guardianNameEn, d.programEn, d.reference, d.gender, d.nationality, d.homeSchool, d.schedule].some(v => /[가-힣]/.test(v))) return '영문 서류에는 영문 내용을 입력해주세요. / Use English in the English letter.';
   return null;
@@ -72,7 +73,7 @@ export function certificateDate(value: string, language: CertificateLanguage) {
 }
 export function certificateValues(d: CertificateData, language: CertificateLanguage): Record<string, string> {
   const en = language === 'en';
-  return { ...d, studentName: en ? d.studentNameEn : d.studentNameKo, guardianName: en ? d.guardianNameEn : d.guardianNameKo, program: en ? d.programEn : d.programKo,
+  return { ...d, stayStartDate: certificateDate(d.stayStartDate || '', language), stayEndDate: certificateDate(d.stayEndDate || '', language), stayPeriod: `${certificateDate(d.stayStartDate || '', language)} ${en ? 'to' : '~'} ${certificateDate(d.stayEndDate || '', language)}`, studentName: en ? d.studentNameEn : d.studentNameKo, guardianName: en ? d.guardianNameEn : d.guardianNameKo, program: en ? d.programEn : d.programKo,
     studentDob: certificateDate(d.studentDob, language), guardianDob: certificateDate(d.guardianDob, language), issueDate: certificateDate(d.issueDate, language), startDate: certificateDate(d.startDate, language), endDate: certificateDate(d.endDate, language), period: `${certificateDate(d.startDate, language)} ${en ? 'to' : '~'} ${certificateDate(d.endDate, language)}`, gender: en ? d.gender : ({ Male: '남', Female: '여' }[d.gender] || d.gender) };
 }
 export const escapeCertificateText = (s: string) => str(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -101,7 +102,7 @@ export function normalizeCertificateDob(v: unknown): string {
   const candidate = /^\d{8}$/.test(s) ? `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}` : s.slice(0,10);
   return dateValid(candidate) ? candidate : '';
 }
-export type CertificateBooking = { id: string; reservation: string; bookerKo: string; bookerEn: string; startDate: string; endDate: string; guardians: { nameKo: string; nameEn: string; dob: string }[]; students: { nameKo: string; nameEn: string; dob: string; programKo: string; programEn: string; startDate: string; endDate: string; invoiceEnd: string }[] };
+export type CertificateBooking = { id: string; reservation: string; bookerKo: string; bookerEn: string; stayStartDate: string; stayEndDate: string; startDate: string; endDate: string; guardians: { nameKo: string; nameEn: string; dob: string }[]; students: { nameKo: string; nameEn: string; dob: string; programKo: string; programEn: string; startDate: string; endDate: string; invoiceEnd: string }[] };
 export function normalizeCertificateBooking(raw: Raw): CertificateBooking {
   const invoice = obj(raw.invoice), booker = obj(invoice.booker);
   const bookerKo = first(raw.booker_name, booker.name), bookerEn = first(raw.booker_english, booker.englishName);
@@ -118,5 +119,5 @@ export function normalizeCertificateBooking(raw: Raw): CertificateBooking {
       programEn: junior ? 'Junior English Language Training Program' : kinder ? 'Kinder English Language Training Program' : /[가-힣]/.test(level) ? '' : level,
       startDate: first(s.academy_start,s.academyStart,raw.academy_start,previous.academyStart), endDate: first(s.academy_end,s.academyEnd,raw.academy_end,previous.academyEnd), invoiceEnd: first(previous.academyEnd) };
   });
-  return { id: str(raw.id), reservation: str(raw.reservation_no), bookerKo, bookerEn, startDate: str(raw.academy_start), endDate: str(raw.academy_end), guardians: [guardian, ...extra], students };
+  return { id: str(raw.id), reservation: str(raw.reservation_no), bookerKo, bookerEn, stayStartDate: normalizeCertificateDob(raw.checkin_date), stayEndDate: normalizeCertificateDob(raw.checkout_date), startDate: str(raw.academy_start), endDate: str(raw.academy_end), guardians: [guardian, ...extra], students };
 }
