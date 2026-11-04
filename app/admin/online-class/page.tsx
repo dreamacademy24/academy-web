@@ -1,6 +1,7 @@
 "use client";
 import { onlineCreditsComplete } from "@/lib/onlineLastDay";
 import { getTutorColor } from "@/lib/tutorColors";
+import OnlineApplicationInbox from '@/components/OnlineApplicationInbox';
 import Booking3Applications from '@/components/Booking3Applications';
 import { useState, useEffect, useCallback, useRef } from "react";
 import { toastOk, toastErr } from "@/lib/toast";
@@ -148,7 +149,7 @@ export default function OnlineClassPage() {
   async function toggleConfirm(id: string) {
     const on = !confirmedIds.has(id);
     const r = await fetch("/api/online-class/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, on }) });
-    if (r.ok) setConfirmedIds(prev => { const n = new Set(prev); if (on) n.add(id); else n.delete(id); return n; });
+    if (r.ok) setConfirmedIds(prev => { const n = new Set(prev); if (on) n.add(id); else n.delete(id); return n; }); else { const d=await r.json(); toastErr(d.error || "승인하지 못했습니다."); }
   }
 
   // 변경요청 수신함
@@ -657,7 +658,7 @@ export default function OnlineClassPage() {
         <button className="tab" onClick={() => router.push("/admin/online-class/availability")}>📊 가용 현황</button>
       </div>
 
-      {tab === 'applications' && <Booking3Applications />}
+      {tab === 'applications' && <><OnlineApplicationInbox onApproved={id=>setConfirmedIds(prev=>new Set([...prev,id]))} /><Booking3Applications /></>}
       {/* ═══ TAB 1: 수강생 목록 ═══ */}
       {tab === "list" && <>
         <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>

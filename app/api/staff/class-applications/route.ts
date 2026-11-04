@@ -1,3 +1,4 @@
+import { pendingOnlineApplications } from '@/lib/pendingOnlineApplications';
 import {NextResponse} from 'next/server';
 import {portalDb,portalStaffIdentity} from '@/lib/portalAuth';
 export const dynamic='force-dynamic';
@@ -12,6 +13,13 @@ export async function GET(req:Request){
    if(r.error)throw r.error;rows.push(...r.data);if(r.data.length<500)break;
   }
   const id=username.replace(/^admin-/,''),visible=rows.filter(r=>!r.secret||r.created_by===id||r.assignee===id||(Array.isArray(r.assignees)&&r.assignees.includes(id)));
+  const pending=await pendingOnlineApplications(db);
+  const others=visible.filter(r=>r.application_source.table!=='online_enrollments');
+  visible.splice(0,visible.length,...others,...pending.map(e=>({
+   id:'class-application:online_enrollments:'+e.id,title:(e.tutor_id?'[승인 대기]':'[현지 배정 대기]')+' 화상영어 · '+e.student_name,
+   assignee:'',assignees:[],shared:true,done:false,created_by:'system',created_at:e.created_at,
+   application_source:{kind:'online',table:'online_enrollments',id:e.id,student:e.student_name,url:'/admin/online-class?tab=applications'}
+  })));
   const counts={tutor:visible.filter(r=>r.application_source.kind==='tutor').length,online:visible.filter(r=>r.application_source.kind==='online').length};
   return NextResponse.json({counts,items:visible,employee:id},{headers});
  }catch{return NextResponse.json({error:'신규 신청을 불러오지 못했습니다. 다시 확인해주세요.'},{status:503,headers});}
