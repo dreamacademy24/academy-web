@@ -632,6 +632,7 @@ export default function OnlineClassPage() {
 .submit-btn{width:100%;padding:14px;background:#1a6fc4;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
 .submit-btn:disabled{opacity:0.5;cursor:not-allowed}
 .section-title{font-size:14px;font-weight:800;color:#1a6fc4;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e2e8f0}
+@media(max-width:760px){aside.admin-noprint:has(+ .admin-main .oc-w){display:none}.oc-w .tabs{overflow-x:auto}.oc-w .tab{flex:0 0 auto;white-space:nowrap;padding:12px 14px}}
 @media(max-width:700px){.oc-w{padding:16px 10px}.form-row{grid-template-columns:1fr}.toolbar{flex-direction:column;align-items:stretch}}
     `}</style>
     <div className="oc-w">
