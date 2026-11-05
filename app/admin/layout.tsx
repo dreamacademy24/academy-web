@@ -43,7 +43,6 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "드림하우스 룸", href: "/dreamhouse-rooms", ext: true },
     { label: "하우스 보고", href: "/admin/house-reports" },
     { label: "투어셔틀 관리", href: "/admin/tour-shuttle" },
-    { label: "셔틀·기사 관리", href: "/admin/shuttle-management" },
     { label: "차량 스케줄", href: "/admin/vehicle-schedule" },
     { label: "체크인 준비", href: "/admin/checkin-details" },
     { label: "시재 관리", href: "/admin/cash-ledger" },
