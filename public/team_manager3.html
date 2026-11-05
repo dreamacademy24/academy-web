@@ -3994,7 +3994,9 @@ function loadTeachers(){
         .map(function(x){return {id:x.username,name:x.name,color:x.color||'#0ea5e9',initial:x.initial||(x.name||'?').slice(0,1).toUpperCase(),isTeacher:true};});
     }).catch(function(e){console.warn('[teachers] load fail',e);TEACHERS=[];});
 }
-function getP(id){return ALL.find(e=>e.id===id)||(TEACHERS&&TEACHERS.find(e=>e.id===id))||(id==='jun'?{id:'jun',name:'Jun (퇴사)',color:'#94a3b8',initial:'JU',inactive:true}:null);}
+function _isDreamSystem(id){return String(id||'').trim().toLowerCase()==='system';}
+function _isDreamTask(t){return _isDreamSystem(t.createdBy)||_isDreamSystem(t.created_by);}
+function getP(id){if(_isDreamSystem(id))return {id:'system',name:'드림',color:'#a16207',initial:'드림',system:true};return ALL.find(e=>e.id===id)||(TEACHERS&&TEACHERS.find(e=>e.id===id))||(id==='jun'?{id:'jun',name:'Jun (퇴사)',color:'#94a3b8',initial:'JU',inactive:true}:null);}
 
 let CU=null,curEmpId=null,curProjId=null,editProjId=null,editTaskId=null;
 let calDate=new Date(),calView='month',boardFilter='all',boardView='task',empFilter='active';
@@ -5947,6 +5949,9 @@ function _btStrip(tasksAll){
     '<div style="font-size:14px;font-weight:800;color:var(--text)">📢 지시·미배정</div>'+
     '<div style="font-size:12px;color:var(--text3);margin-top:2px">'+unAll.length+'건 대기'+(unUrg?' · 🚨 '+unUrg:'')+'</div>'+
     '<div style="font-size:11.5px;font-weight:800;margin-top:3px;color:'+(seenCnt?'#16a34a':'#dc2626')+'">'+(unAll.length?(seenCnt?seenCnt+'명이 봄':'아무도 안 봄'):'—')+'</div></button>';
+  var dreamTasks=tasksAll.filter(function(t){return _isDreamTask(t)&&!_isArchivedTask(t.id);});
+  var dreamPending=dreamTasks.filter(function(t){return !isDoneTask(t);}).length;
+  h+='<button class="bt-emp'+(_boardEmpFilter==='_dream'?' on':'')+'" onclick="_setBoardEmpFilter(\'_dream\')" style="background:#fef9c3;border:1px solid #eab308;color:#713f12"><span style="display:inline-flex;width:30px;height:30px;border-radius:9px;background:#facc15;color:#713f12;align-items:center;justify-content:center;font-weight:800;font-size:12px;margin-bottom:5px">드림</span><div style="font-size:14px;font-weight:800">드림이/시스템</div><div style="font-size:12px;margin-top:2px">진행 '+dreamPending+' · 완료 '+(dreamTasks.length-dreamPending)+'</div><div style="font-size:11.5px;margin-top:3px">자동 생성 업무</div></button>';
   ALL.forEach(function(e){
     var et=tasksAll.filter(function(t){return !_isArchivedTask(t.id)&&(t.assignee===e.id||(t.assignees&&t.assignees.indexOf(e.id)>=0));});
     if(!isManagerCU()&&CU&&CU.id!==e.id)et=et.filter(function(t){return t.shared;});
@@ -6028,6 +6033,7 @@ function _boardTableHtml(){
   var pool=allPool.filter(function(t){return isDoneTask(t)||!_isArchivedTask(t.id);});
   var poolNoEmp=pool;
   if(_boardEmpFilter==='_un')pool=pool.filter(isUnassignedTask);
+  else if(_boardEmpFilter==='_dream')pool=pool.filter(_isDreamTask);
   else if(_boardEmpFilter)pool=pool.filter(function(t){return t.assignee===_boardEmpFilter||(t.assignees&&t.assignees.indexOf(_boardEmpFilter)>=0);});
   var eod=new Date(new Date().setHours(23,59,59,999));
   var urg=function(t){return t.priority==='high'||(t.due&&parseLocalDate(t.due)<=eod);};
