@@ -1,8 +1,7 @@
 "use client";
 import { onlineCreditsComplete } from "@/lib/onlineLastDay";
 import { getTutorColor } from "@/lib/tutorColors";
-import OnlineApplicationInbox from '@/components/OnlineApplicationInbox';
-import Booking3Applications from '@/components/Booking3Applications';
+import OnlineApplicationInbox from '@/components/UnifiedOnlineApplicationInbox';
 import { useState, useEffect, useCallback, useRef } from "react";
 import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -658,7 +657,7 @@ export default function OnlineClassPage() {
         <button className="tab" onClick={() => router.push("/admin/online-class/availability")}>📊 가용 현황</button>
       </div>
 
-      {tab === 'applications' && <><OnlineApplicationInbox onApproved={id=>setConfirmedIds(prev=>new Set([...prev,id]))} /><Booking3Applications /></>}
+      {tab === 'applications' && <><OnlineApplicationInbox onApproved={id=>setConfirmedIds(prev=>new Set([...prev,id]))} /></>}
       {/* ═══ TAB 1: 수강생 목록 ═══ */}
       {tab === "list" && <>
         <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
