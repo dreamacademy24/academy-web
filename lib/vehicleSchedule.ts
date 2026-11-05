@@ -126,6 +126,17 @@ export function inRange(date: string, from: string, to: string): boolean {
   return date >= from && date <= to;
 }
 
+// Manila overnight airport runs belong to the preceding driver's night sheet.
+export function airportOperatingDate(date: string, time?: string): string {
+  const clock=to24h(time);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||clock>='06:00')return date;
+  return new Date(Date.parse(date+'T12:00:00Z')-86400000).toISOString().slice(0,10);
+}
+export function airportFlightNote(date:string,time:string|undefined,direction:'도착'|'출발'):string {
+  const clock=to24h(time);
+  return `${airportOperatingDate(date,time)!==date?'다음 날 ':''}${date} ${clock==='99:99'?'시간 미정':clock} ${direction}편 · 세부 현지시간`;
+}
+
 // ── 소스별 raw 타입 (느슨하게) ────────────────────────────────
 export interface RawPickup {
   booking_id?: string;
@@ -222,13 +233,15 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
 
     // 도착 (공항 → 숙소). pickup_place/drop_off는 보통 "공항"쪽 값이라 숙소는 house_no에서.
     const inDate = String(b.flight_in_date || b.checkin_date || "").slice(0, 10);
-    if (inDate && (AIRPORT.test(b.pickup_place || "") || b.flight_in_date || b.flight_in_time || b.flight_in) && !covered.has(`${b.id}_pickup_${inDate}`)) {
+    const inTime=b.flight_in_time||b.flight_in?.match(/\b(\d{1,2}:\d{2})\b/)?.[1];
+    const inOperating=airportOperatingDate(inDate,inTime);
+    if (inDate && (AIRPORT.test(b.pickup_place || "") || b.flight_in_date || b.flight_in_time || b.flight_in) && !covered.has(`${b.id}_pickup_${inDate}`) && !covered.has(`${b.id}_pickup_${inOperating}`)) {
       const dest = combo ? accomLabel(b.seg1_type, room) : (room || accomFromType(b.accom_type) || "숙소");
       out.push({
-        id: `bk_in_${b.id}`, date: inDate, time: "", sortTime: "99:99",
+        id: `bk_in_${b.id}`, date: inOperating, time: "", sortTime: "99:99",
         kind: "pickup", source: "bookings", guest, location: "공항", destination: dest,
         num_people: people, flight_info: fmtFlight(b.flight_in_airline, b.flight_in_no, b.flight_in),
-        locked: true, auto: true, note: `예약 기반 초안 · 항공 도착 ${b.flight_in_time || "미입력"} · 차량 시간 확인 필요`,
+        locked: true, auto: true, note: `예약 기반 초안 · ${airportFlightNote(inDate,inTime,'도착')} · 차량 시간 확인 필요`,
       });
     }
     // 콤보 환승 (숙소1 → 숙소2)
@@ -246,14 +259,14 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
     // A scheduled evening departure can serve an early flight on the following day.
     const outClock = to24h(b.flight_out_time || b.flight_out?.match(/\b(\d{1,2}:\d{2})\b/)?.[1]);
     const priorDate = outDate ? new Date(Date.parse(outDate+'T12:00:00Z')-86400000).toISOString().slice(0,10) : '';
-    const overnightDrop = outClock < '06:00' && (pickups||[]).some(p=>p.booking_id===b.id && PICKUP_KIND[p.request_type]==='dropoff' && !['cancelled','취소'].includes(p.status||'') && String(p.request_date||'').slice(0,10)===priorDate && to24h(p.request_time)>='18:00' && to24h(p.request_time)<'24:00');
+    const overnightDrop = outClock < '06:00' && covered.has(`${b.id}_dropoff_${priorDate}`);
     if (outDate && (AIRPORT.test(b.drop_off || "") || b.flight_out_date || b.flight_out_time || b.flight_out) && !covered.has(`${b.id}_dropoff_${outDate}`) && !overnightDrop) {
       const loc = combo ? accomLabel(b.seg2_type, room) : (room || accomFromType(b.accom_type) || "숙소");
       out.push({
-        id: `bk_out_${b.id}`, date: outDate, time: "", sortTime: "99:99",
+        id: `bk_out_${b.id}`, date: airportOperatingDate(outDate,outClock), time: "", sortTime: "99:99",
         kind: "dropoff", source: "bookings", guest, location: loc, destination: "공항",
         num_people: people, flight_info: fmtFlight(b.flight_out_airline, b.flight_out_no, b.flight_out),
-        locked: true, auto: true, note: `예약 기반 초안 · 항공 출발 ${b.flight_out_time || "미입력"} · 차량 시간 확인 필요`,
+        locked: true, auto: true, note: `예약 기반 초안 · ${airportFlightNote(outDate,outClock,'출발')} · 차량 시간 확인 필요`,
       });
     }
   }

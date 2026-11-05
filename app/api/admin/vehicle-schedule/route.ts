@@ -11,6 +11,8 @@ export async function GET(req:Request){
   const url=new URL(req.url),from=url.searchParams.get('from'),to=url.searchParams.get('to');
   if(!validDate(from)||!validDate(to)||to<from||(Date.parse(to)-Date.parse(from))/86400000>31)return reply({error:'조회 기간은 최대 31일입니다.'},400);
   const db=portalDb();
+  // The final night's sheet also includes flights arriving/departing next morning.
+  const flightTo=new Date(Date.parse(to+'T12:00:00Z')+86400000).toISOString().slice(0,10);
   async function read(table:string,configure:(q:ReturnType<ReturnType<typeof db.from>['select']>)=>ReturnType<ReturnType<typeof db.from>['select']>){
    const rows:Record<string,unknown>[]=[];
    for(let start=0;;start+=500){
@@ -22,7 +24,7 @@ export async function GET(req:Request){
   const [pickups,bookings,drivers,shuttles,fieldtrips,scheduleItems,settings,commutes]=await Promise.all([
    // Read requests across dates so an unassigned request cannot disappear behind the date filter.
    read('pickup_requests',q=>q.order('id')),
-   read('bookings',q=>q.or(`and(checkout_date.gte.${from},checkin_date.lte.${to}),and(flight_in_date.gte.${from},flight_in_date.lte.${to}),and(flight_out_date.gte.${from},flight_out_date.lte.${to}),and(seg1_checkout.gte.${from},seg1_checkout.lte.${to})`).order('id')),
+   read('bookings',q=>q.or(`and(checkout_date.gte.${from},checkin_date.lte.${to}),and(flight_in_date.gte.${from},flight_in_date.lte.${flightTo}),and(flight_out_date.gte.${from},flight_out_date.lte.${flightTo}),and(seg1_checkout.gte.${from},seg1_checkout.lte.${to})`).order('id')),
    read('drivers',q=>q.eq('is_active',true).order('id')),
    read('shuttle_applications',q=>q.gte('tour_date',from).lte('tour_date',to).order('id')),
    read('fieldtrip_applications',q=>q.order('id')),
