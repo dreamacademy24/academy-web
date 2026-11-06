@@ -1,4 +1,4 @@
-import { buildOnlineSessionDates } from './onlineClassSchedule';
+import { buildOnlineSessionDates, onlineStartWarning } from './onlineClassSchedule';
 import { BOOKING3_DAYS, BOOKING3_TIMES, koreaToday } from './booking3';
 export type PackageBooking = { id:string; number:string; from:string; to:string; weeks:number; basis:string; student:string; english:string; claimed?:string };
 export type PackagePart = { count:number; start:string; days:string[]; times:Record<string,string> };
@@ -74,6 +74,8 @@ export function buildPackageSchedule(plan:PackagePlan,bookings:PackageBooking[],
     if(part.count<committed)throw Error(`${key==='pre'?'연수 전':'연수 후'} 기존 사용·보존 예정 ${committed}회보다 적게 배정할 수 없습니다.`);
     const remaining=part.count-committed;
     if(remaining){
+      const warning=onlineStartWarning(part.start,holidays);
+      if(warning && part.start>=today)throw Error(warning);
       if(key==='post'&&part.start<=bounds.to)throw Error(`연수 후 시작일은 마지막 연수 종료일 ${bounds.to} 다음 날부터 지정해주세요.`);
       const start=part.start>today?part.start:today;
       const excluded=new Set([...holidays,...fixed.map(s=>s.scheduled_date)]);

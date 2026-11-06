@@ -1,5 +1,7 @@
 "use client";
 import { portalFetch } from "@/lib/portalFetch";
+import { fetchDeployedHolidays } from "@/lib/holidays";
+import { isPeakVacation, onlineStartWarning } from "@/lib/onlineClassSchedule";
 import type {PackagePlan} from '@/lib/onlinePackagePlan';
 import { useState, useEffect, useMemo, useCallback, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -80,6 +82,8 @@ function PortalOnlineClassInner() {
   const applyHref = "/portal/online-class/apply" + (previewUid ? `?preview_uid=${encodeURIComponent(previewUid)}` : "");
 
   const [authChecking, setAuthChecking] = useState(true);
+  const [holidayDates,setHolidayDates]=useState<Set<string>>(new Set());
+  useEffect(()=>{void fetchDeployedHolidays().then(days=>setHolidayDates(new Set(days.map(day=>day.date))));},[]);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -182,6 +186,8 @@ function PortalOnlineClassInner() {
     const uid = testUser ? activeEnroll.customer_user_id : authUserId;
     if (!uid) { setMsg({ text: "계정 연결 정보가 없습니다.", type: "err" }); return; }
     if (!sgDate && !sgTime.trim()) { setMsg({ text: "새 날짜 또는 시간을 입력해주세요.", type: "err" }); return; }
+    const warning=onlineStartWarning(sgDate,holidayDates);
+    if(warning){setMsg({text:warning,type:"err"});return;}
     setSgSubmitting(true);
     try {
       const res = await portalFetch("/api/portal/online-class/change-request", {
@@ -334,8 +340,8 @@ function PortalOnlineClassInner() {
 .stat.used .num{color:#92400e}
 .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cal-title{font-size:14px;font-weight:800}
-.cal-nav{display:flex;gap:6px}
-.cal-nav button{width:28px;height:28px;border:1px solid #e2e8f0;background:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:13px}
+.cal-nav{display:flex;gap:6px;flex-shrink:0}
+.cal-nav button{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:36px;padding:4px 9px;white-space:nowrap;border:1px solid #e2e8f0;background:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:13px;line-height:1.25}
 .cal-nav button:hover{background:#f1f5f9}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .cal-wd{text-align:center;font-size:11px;font-weight:700;color:#6b7c93;padding:4px 0}
@@ -512,9 +518,11 @@ function PortalOnlineClassInner() {
                 const todayStr = localStr(new Date());
                 const isToday = c.dateStr === todayStr;
                 const dayS = sessionsByDate[c.dateStr] || [];
+                const closure=isPeakVacation(c.dateStr) ? "방학" : holidayDates.has(c.dateStr) ? "휴무" : "";
                 return (
                   <div key={idx} className={`cal-cell ${isToday ? "today" : ""}`}>
                     <div className="d">{c.date.getDate()}</div>
+                    {closure && <small style={{display:"block",fontSize:11,fontWeight:700,lineHeight:"15px",color:"#913d27"}}>{closure}</small>}
                     <div className="marks">
                       {dayS.map(s => <span key={s.id} className={`cal-dot ${s.status}`} title={STATUS_STYLE[s.status]?.label} />)}
                     </div>

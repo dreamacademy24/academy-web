@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { buildOnlineSessionDates } from '@/lib/onlineClassSchedule'
+import { buildOnlineSessionDates, onlineStartWarning } from '@/lib/onlineClassSchedule'
 import { planOnlineSessions, onlineSessionCountIssue } from '@/lib/onlineSessionRepair'
 import { isPortalAdmin, getStaffIdentity } from '@/lib/portalAuth'
 
@@ -160,6 +160,9 @@ export async function POST(req: Request) {
     }
 
     // 1. Insert enrollment
+    const holidaySet = await loadHolidaySet()
+    const warning=onlineStartWarning(start_date,holidaySet)
+    if(warning)return NextResponse.json({error:warning},{status:400})
     if (tutor_id) {
       const conflict = await findTutorConflict(tutor_id, { days_of_week, class_time_kr, day_times: day_times || null, start_date, end_date })
       if (conflict) return NextResponse.json({ error: `⛔ 티쳐 시간 중복: 이미 ${conflict} 수업이 있어요. 다른 시간/티쳐를 선택하세요.` }, { status: 409 })
@@ -197,7 +200,6 @@ export async function POST(req: Request) {
     if (enErr) return NextResponse.json({ error: enErr.message }, { status: 500 })
 
     // 2. Generate sessions
-    const holidaySet = await loadHolidaySet()
     const _stays = await loadStayRanges(customer_user_id || null, student_name || null)
     const _built = buildOnlineSessionDates(start_date, days_of_week, Number(total_sessions), holidaySet, _stays)
     const sessionDates = _built.dates

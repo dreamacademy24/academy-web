@@ -15,7 +15,7 @@ test('All before and all after supported',()=>{for(const before of [0,12]){const
 test('Manual administrator adjustment requires reason',()=>{const p=plan();p.total=15;p.post.count=6;p.manual=true;assert.throws(()=>build(p),/사유/);p.reason='추가 제공 3회';assert.equal(build(p).rows.length,15);assert.throws(()=>r.validatePackagePlan(p,bs,false),/총 제공/);});
 test('Forged counts, source IDs, duplicate weekdays rejected',()=>{for(const mutate of [p=>p.total=999,p=>p.bookingIds=['other'],p=>p.pre.days=['월','월'],p=>p.pre.start='2026-02-30']){const p=plan();mutate(p);assert.throws(()=>r.validatePackagePlan(p,bs,false));}});
 test('Insufficient pre-study capacity cannot spill into post-study',()=>{const p=plan();p.pre.start='2026-10-30';assert.throws(()=>build(p),/1회만 가능합니다/);});
-test('Peak holiday dates excluded and post-study stays after checkout',()=>{const p=plan();p.pre.count=0;p.post.count=12;const x=build(p);assert.ok(x.rows.every(s=>s.date>'2026-11-29'));assert.ok(!x.rows.some(s=>s.date>='2026-12-15'&&s.date<'2027-03-01'));p.post.start='2026-11-29';assert.throws(()=>build(p),/종료일/);});
+test('Peak holiday dates excluded and post-study stays after checkout',()=>{const p=plan();p.pre.count=0;p.post.count=12;const x=build(p);assert.ok(x.rows.every(s=>s.date>'2026-11-29'));assert.ok(!x.rows.some(s=>s.date>='2026-12-24'&&s.date<'2027-03-01'));p.post.start='2026-11-29';assert.throws(()=>build(p),/종료일/);});
 test('Attendance, notes and previous pending sessions preserved; numbering unique',()=>{const s=[{id:'a',status:'attended',scheduled_date:'2026-09-11',session_number:1},{id:'b',status:'scheduled',scheduled_date:'2026-09-09',session_number:2},{id:'c',status:'scheduled',scheduled_date:'2026-10-07',session_number:4,note:'keep'}];const snapshot=JSON.stringify(s),x=build(plan(),s,1);assert.equal(x.rows.length,9);assert.equal(x.fixedCount,3);assert.equal(x.used,1);assert.equal(JSON.stringify(s),snapshot);assert.ok(x.rows.every(s=>![1,2,4].includes(s.number)));assert.ok(!x.rows.some(s=>s.date==='2026-10-07'));});
 test('Free makeup original does not consume credit twice',()=>{const s=[{id:'a',status:'makeup',scheduled_date:'2026-09-11',session_number:1},{id:'b',status:'scheduled',scheduled_date:'2026-10-07',session_number:13,is_makeup_added:true,original_session_id:'a'}];assert.equal(build(plan(),s).rows.length,11);});
 test('Recorded sessions cannot be erased by decreasing allocation',()=>{const p=plan();p.pre.count=0;p.post.count=12;assert.throws(()=>build(p,[{id:'a',status:'attended',scheduled_date:'2026-09-11',session_number:1}],1),/기존 사용/);});
@@ -23,4 +23,14 @@ test('Unexplained used balance blocks extra credits',()=>assert.throws(()=>build
 test('Student-specific study period preferred and cancelled reservations excluded',()=>{const rows=[{id:'a',status:'완료',checkin_date:'2026-07-26',checkout_date:'2026-08-16',dh_weeks:4,students:[{name_kr:'김민채',academyStart:'2026-07-27',academyEnd:'2026-08-14'}]}];assert.equal(r.packageBookings(rows,'김민채')[0].weeks,3);assert.equal(r.packageBookings([{...rows[0],status:'취소'}]).length,0);});
 test('Makeup history does not extend first or last actual class dates',()=>{const s=[{id:'a',status:'makeup',scheduled_date:'2026-10-30',session_number:20,package_phase:'pre'},{id:'b',status:'makeup',scheduled_date:'2026-11-30',session_number:21,package_phase:'post'}];const p=plan();p.post.start='2027-03-01';const x=build(p,s);assert.equal(x.summary.pre.last,'2026-10-23');assert.equal(x.summary.post.first,'2027-03-01');assert.equal(x.fixedCount,2);assert.equal(x.rows.length,12);});
 test('An approved individual move survives whole-package regeneration unchanged',()=>{const s=[{id:'approved',status:'scheduled',scheduled_date:'2026-10-06',scheduled_time_kr:'20:30',session_number:4,schedule_locked:true,package_phase:'pre'}];const original=JSON.stringify(s);const x=build(plan(),s);assert.equal(x.fixedCount,1);assert.equal(x.rows.length,11);assert.ok(x.rows.every(row=>row.number!==4&&row.date!=='2026-10-06'));assert.equal(JSON.stringify(s),original);});
+test('Eight week package with Mon Tue Thu before winter break',()=>{
+  const bookings=[booking('b1',8,'2027-01-02','2027-02-27')];
+  const p={...plan(),total:24,pre:part(12,'2026-11-30',['월','화','목']),post:part(12,'2027-03-02')};
+  const schedule=()=>r.buildPackageSchedule(p,bookings,[],new Set(['2026-11-30']),0,'2026-11-06');
+  assert.throws(schedule,/학원 휴일/);
+  p.pre.start='2026-12-01';assert.throws(schedule,/10회/);
+  p.pre.start='2026-11-24';assert.equal(schedule().summary.pre.count,12);
+  p.pre.start='2026-12-01';p.pre.count=10;p.post.count=14;
+  assert.equal(schedule().summary.pre.last,'2026-12-22');
+});
 console.log(passed+' package plan tests passed');

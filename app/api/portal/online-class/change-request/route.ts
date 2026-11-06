@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { isPortalAdmin, portalUser } from '@/lib/portalAuth'
+import { onlineStartWarning } from '@/lib/onlineClassSchedule'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,6 +36,13 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: '앱 로그인이 필요합니다.' }, { status: 401 })
     if (customer_user_id !== user.id) return NextResponse.json({ error: '본인 수업만 변경할 수 있습니다.' }, { status: 403 })
     const kind = req_type === 'single' ? 'single' : 'full'
+    const requestedDate = kind === 'single' ? req_date : effective_from
+    if (requestedDate) {
+      const {data,error}=await supabase.from('holidays').select('date').eq('is_deployed',true).eq('date',requestedDate).limit(1)
+      if(error)return NextResponse.json({error:'휴일 일정을 확인할 수 없습니다.'},{status:503})
+      const warning=onlineStartWarning(requestedDate,new Set((data||[]).map(h=>h.date)))
+      if(warning)return NextResponse.json({error:warning},{status:400})
+    }
     if (!enrollment_id) return NextResponse.json({ error: 'enrollment_id required' }, { status: 400 })
     if (!customer_user_id) return NextResponse.json({ error: 'customer_user_id required' }, { status: 400 })
     if (kind === 'single') {

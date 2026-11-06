@@ -15,6 +15,12 @@ export function isPeakVacation(dateStr: string): boolean {
 
 const DAY_KR_TO_JS: Record<string, number> = { "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6 };
 
+export function onlineStartWarning(date: string, holidays: Set<string>): string {
+  if (holidays.has(date)) return `${date}은 학원 휴일이라 화상영어를 신청할 수 없습니다. 다른 시작일을 선택해주세요.`;
+  if (isPeakVacation(date)) return `${date}은 화상영어 방학·성수기 휴무일입니다. 다른 시작일을 선택해주세요.`;
+  return '';
+}
+
 /**
  * 시작일부터 요일·회차 기준으로 실제 수업 날짜를 생성.
  * 성수기(방학)·휴일·주말(요일 미선택)은 건너뜀 → 마지막 날짜 = 마지막 회차.

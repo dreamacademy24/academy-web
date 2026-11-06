@@ -7,9 +7,14 @@ import OnlineClassRules from '@/components/OnlineClassRules';
 import s from './booking3.module.css';
 import EnglishLevelOptions from '@/components/EnglishLevelOptions';
 import { englishLevelLabel } from '@/lib/englishLevels';
+import { fetchDeployedHolidays } from '@/lib/holidays';
+import { onlineStartWarning } from '@/lib/onlineClassSchedule';
 
 export default function Booking3Form() {
   const [form, setForm] = useState<Form>(booking3Initial);
+  const [holidays,setHolidays]=useState<Set<string>>(new Set());
+  useEffect(()=>{void fetchDeployedHolidays().then(rows=>setHolidays(new Set(rows.map(row=>row.date))));},[]);
+  const startWarning=onlineStartWarning(form.startDate,holidays);
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -30,6 +35,7 @@ export default function Booking3Form() {
   function next() {
     if (step === 1 && (!form.guardian.trim() || !form.phone.trim() || !form.student.trim() || !form.englishName.trim() || !form.birthYear)) { setError('필수 학생·보호자 정보를 입력해주세요.'); return; }
     if (step === 2) {
+      if(startWarning)return;
       try { validateBooking3({ ...form, privacy: true, rules: true }); } catch (e) { setError((e as Error).message); return; }
     }
     setError(''); setStep(step + 1); window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -90,7 +96,7 @@ export default function Booking3Form() {
               <label className={s.agree}><input type="checkbox" checked={form.rules} onChange={e => change('rules', e.target.checked)} />수업 운영·취소·환불 규정을 확인했습니다. (필수)</label>
               <div className={s.privacy}><p>신청 상담·수업 운영·앱 계정 발급을 위해 학생 이름·출생연도·학습 정보, 보호자 이름·연락처 및 선택 입력한 정보를 수집합니다. 자세한 보유·처리 기준은 <a href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 처리방침</a>에서 확인할 수 있습니다. 동의하지 않으면 신청할 수 없습니다.</p><label className={s.agree}><input type="checkbox" checked={form.privacy} onChange={e => change('privacy', e.target.checked)} />개인정보 수집·이용에 동의합니다. (필수)</label></div>
             </>}
-            {error && <div className={s.error} role="alert">{error}</div>}
+            {(error || (step===2 && startWarning)) && <div className={s.error} role="alert">{error || startWarning}</div>}
             <div className={s.actions}>{step > 1 && <button type="button" disabled={busy} className={s.secondary} onClick={() => setStep(step - 1)}>이전</button>}<button type="button" disabled={busy} className={s.primary} onClick={step < 3 ? next : submit}>{busy ? '처리 중…' : step < 3 ? '다음 단계 →' : '화상영어 신청 접수'}</button></div>
           </section>
           <aside className={s.summary}><div className={s.summaryTop}><span>MY CLASS PLAN</span><h2>우리 아이의 수업</h2><strong>{quote.totalSessions}<small>회</small></strong><p>주 {form.weekly}회 · {form.months}개월 등록</p></div><dl><div><dt>기본 수업</dt><dd>{quote.paidSessions}회</dd></div><div><dt>등록 혜택</dt><dd>+ {quote.bonusSessions}회</dd></div><div className={s.total}><dt>신청 금액</dt><dd>{quote.amount.toLocaleString()}원</dd></div></dl><p className={s.muted}>1개월은 4주 기준입니다.<br />3개월 +2주 / 6개월 +4주 혜택</p><div className={s.summaryFoot}>25분 1:1 수업<br />한국 시간 · 평일 운영</div><button type="button" className={s.textButton} onClick={() => setGuide(true)}>수업 안내 보기 ↗</button></aside>

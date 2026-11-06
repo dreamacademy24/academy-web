@@ -39,11 +39,19 @@ async function test(name, run) { await run(); passed++; console.log('PASS ' + na
   await test('Forged totals and extra fields ignored', () => { const value=rules.validateBooking3({...valid(), totalSessions:999,amount:1,customer_user_id:'foreign'},'2026-09-14');assert.equal(value.totalSessions,undefined);assert.equal(value.customer_user_id,undefined); });
   const requests=[];
   let rpcError=null;
-  const mocks={ '@/lib/portalAuth': { portalUser:async()=>null, portalDb:()=>({rpc:async(name,args)=>{requests.push(args);return{data:'receipt-id',error:rpcError};}}) } };
+  const holidays={select(){return this},eq(key,value){if(key==='date')this.date=value;return this},limit(){return {data:this.date==='2026-11-30'?[{date:this.date}]:[],error:null}}};
+  const mocks={ '@/lib/portalAuth': { portalUser:async()=>null, portalDb:()=>({from:()=>holidays,rpc:async(name,args)=>{requests.push(args);return{data:'receipt-id',error:rpcError};}}) } };
   const api=load('app/api/booking3/route.ts',mocks);
   const request=(body,origin='https://www.dreamacademyph.com')=>new Request('https://www.dreamacademyph.com/api/booking3',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)});
   const body=()=>({requestKey:require('node:crypto').randomUUID(),form:valid()});
   process.env.SUPABASE_SERVICE_ROLE_KEY='unit-test-only-not-a-real-key';
+  await test('Holiday and winter start dates cannot submit an application',async()=>{
+    for(const startDate of ['2026-11-30','2026-12-24','2027-02-28']){
+      const result=await api.POST(request({...body(),form:{...valid(),startDate}}));
+      assert.equal(result.status,400);assert.match((await result.json()).error,/휴일|휴무일/);
+    }
+    assert.equal(requests.length,0);
+  });
   await test('Submission recomputes quote and returns no credentials',async()=>{const r=await api.POST(request({...body(),quote:{totalSessions:999}}));assert.equal(r.status,200);const data=await r.json();assert.equal(data.quote.totalSessions,12);assert.equal(data.password,undefined);assert.equal(requests.at(-1).p_quote.totalSessions,12);});
   await test('Claiming existing account needs real login before any write',async()=>{const before=requests.length;assert.equal((await api.POST(request({...body(),useExisting:true}))).status,401);assert.equal(requests.length,before);});
   await test('Cross-origin submission blocked',async()=>assert.equal((await api.POST(request(body(),'https://other.example'))).status,403));

@@ -2,6 +2,7 @@ import { createHash, createHmac } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { portalDb, portalUser } from '@/lib/portalAuth';
 import { BOOKING3_VERSION, booking3Quote, validateBooking3 } from '@/lib/booking3';
+import { onlineStartWarning } from '@/lib/onlineClassSchedule';
 
 export async function POST(req: Request) {
   try {
@@ -13,6 +14,10 @@ export async function POST(req: Request) {
     if (body.website) return NextResponse.json({ error: '신청 내용을 확인해주세요.' }, { status: 400 });
     if (typeof body.requestKey !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.requestKey)) throw new Error('신청 페이지를 새로 열어주세요.');
     const payload = validateBooking3(body.form);
+    const holiday = await portalDb().from('holidays').select('date').eq('is_deployed',true).eq('date',payload.startDate).limit(1);
+    if(holiday.error)return NextResponse.json({error:'휴일 일정을 확인할 수 없습니다. 잠시 후 다시 신청해주세요.'},{status:503});
+    const warning=onlineStartWarning(payload.startDate,new Set<string>((holiday.data||[]).map(h=>h.date)));
+    if(warning)return NextResponse.json({error:warning},{status:400});
     const quote = booking3Quote(payload.weekly, payload.months);
     const user = body.useExisting ? await portalUser(req) : null;
     if (body.useExisting && !user) return NextResponse.json({ error: '기존 앱 계정으로 다시 로그인해주세요.' }, { status: 401 });
