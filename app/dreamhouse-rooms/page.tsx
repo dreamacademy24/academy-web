@@ -473,12 +473,13 @@ export default function DreamhouseRooms() {
                           {isDouble && (
                             <div style={{fontSize:9,color:'#dc2626',fontWeight:700}}>중복!</div>
                           )}
-                          {!isDouble && !isConflict && isCheckin && b && (
-                            <div style={{fontSize:9,color:ROOM_COLORS[ri],fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',padding:'0 2px'}}>
-                              {b.booker_name || b.reservation_no || 'IN'}
-                              {stuNames(b) && <div style={{fontSize:8,color:'#64748b',fontWeight:400,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>👶{stuNames(b)}</div>}
+                          {cellBookings.map(guest => (
+                            <div key={guest.id} style={{fontSize:11,color:'#334155',fontWeight:600,overflowWrap:'anywhere',padding:'1px 2px 4px'}}>
+                              {(isConflict || isDouble) && (guest.checkout_date === dateStr ? '퇴실 ' : guest.checkin_date === dateStr ? '입실 ' : '투숙 ')}
+                              {guest.booker_name || guest.reservation_no || '이름 미등록'}
+                              {guest.checkin_date === dateStr && stuNames(guest) && <div style={{fontSize:9,color:'#64748b',fontWeight:400}}>👶{stuNames(guest)}</div>}
                             </div>
-                          )}
+                          ))}
                           {!isDouble && hasBooking && (
                             <div style={{position:'absolute',bottom:2,left:0,right:0,display:'flex',justifyContent:'center',gap:2}}>
                               {isCheckin && <span style={{width:5,height:5,borderRadius:'50%',background:'#4ade80',display:'inline-block'}} title="체크인"/>}
