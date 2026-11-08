@@ -1,31 +1,21 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { getStaffIdentity } from "@/lib/portalAuth";
+import { requireExpenseOwner, expenseErrorResponse } from "@/lib/expenses/auth";
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// 오너 전용 암호. Vercel/.env.local 에 MAY_LEDGER_PASSCODE 설정.
+// 대표의 서명된 직원 세션만 허용합니다. 장부 암호로 우회할 수 없습니다.
 async function checkPass(req: Request): Promise<{ ok: true } | { ok: false; res: NextResponse }> {
-  const origin = req.headers.get('origin');
-  if (origin && origin !== new URL(req.url).origin) return { ok: false, res: NextResponse.json({ error: 'BAD_ORIGIN' }, { status: 403 }) };
-  try {
-    const staff = await getStaffIdentity(req);
-    if (staff?.id === '34ebbb26-9142-4a34-b35f-4fcc4426e27c' && staff.role === 'korean_admin') return { ok: true };
-  } catch {
-    return { ok: false, res: NextResponse.json({ message: '계정 확인에 실패했습니다. 잠시 후 다시 시도해주세요.' }, { status: 503 }) };
-  }
-  const expected = process.env.MAY_LEDGER_PASSCODE;
-  if (!expected) {
-    return { ok: false, res: NextResponse.json(
-      { error: "NO_PASSCODE_ENV", message: "서버에 MAY_LEDGER_PASSCODE 환경변수가 설정되지 않았어요." },
-      { status: 503 }) };
-  }
-  const given = req.headers.get("x-ledger-pass") || "";
-  if (given !== expected) return { ok: false, res: NextResponse.json({ error: "BAD_PASS" }, { status: 401 }) };
-  return { ok: true };
+  try { await requireExpenseOwner(req); return {ok:true}; }
+  catch(error) { return {ok:false,res:expenseErrorResponse(error)}; }
+}
+async function checkApprovedLink(id:string):Promise<NextResponse|null> {
+ const result=await sb.from('expense_claims').select('id').eq('ledger_entry_id',id).eq('status','approved').maybeSingle();
+ if(result.error)return NextResponse.json({message:'승인 연결 확인을 위해 지출 저장소 설정이 필요합니다.'},{status:503});
+ return result.data?NextResponse.json({message:'직원 승인 지출과 연결된 원장은 직접 수정·삭제할 수 없습니다. 원본과 승인 이력을 보존합니다.'},{status:409}):null;
 }
 
 async function getConfig() {
@@ -39,12 +29,17 @@ async function getConfig() {
 // GET — 전체 항목 + 설정
 export async function GET(req: Request) {
   const c = await checkPass(req); if (!c.ok) return c.res;
-  const { data, error } = await sb
-    .from("may_ledger").select("*")
-    .order("entry_date", { ascending: false })
-    .order("created_at", { ascending: false });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ items: data || [], config: await getConfig() });
+  const items:Record<string,unknown>[]=[];
+  for(let offset=0;;offset+=1000){
+   const {data,error}=await sb.from('may_ledger').select('*').order('entry_date',{ascending:false}).order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+999);
+   if(error)return NextResponse.json({message:'원장 조회에 실패했습니다.'},{status:503});
+   items.push(...(data||[]));
+   if((data||[]).length<1000)break;
+   if(items.length>=50000)return NextResponse.json({message:'원장 거래량이 많습니다. 기간별 통합 보고를 이용하세요.'},{status:413});
+  }
+  const payload={items,config:await getConfig()};
+  if(Buffer.byteLength(JSON.stringify(payload))>4*1024*1024)return NextResponse.json({message:'전체 원장 크기가 큽니다. 기간별 통합 보고를 이용하세요.'},{status:413});
+  return NextResponse.json(payload,{headers:{'Cache-Control':'no-store'}});
 }
 
 // POST — 항목 추가, 또는 {kind:'config'} 로 환율 저장
@@ -63,6 +58,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  // Company manual expenses are entered only by Abby/Bella and posted by approval.
+  // Owner personal-book entries, income, and FX administration remain separate.
+  if(b.book!=="집"&&b.type!=="income")return NextResponse.json({message:'회사 지출은 아비·벨라 제출 후 대표 승인으로 반영합니다.'},{status:403});
   const amount = Number(b.amount);
   if (!isFinite(amount) || amount <= 0) return NextResponse.json({ error: "금액을 확인해주세요" }, { status: 400 });
   const id = (typeof b.id === "string" && b.id) ? b.id
@@ -91,6 +89,7 @@ export async function PATCH(req: Request) {
   const c = await checkPass(req); if (!c.ok) return c.res;
   const b = await req.json().catch(() => null) as { id?: string; patch?: Record<string, unknown> } | null;
   if (!b?.id || !b.patch) return NextResponse.json({ error: "id/patch 필요" }, { status: 400 });
+  const protectedEntry=await checkApprovedLink(b.id);if(protectedEntry)return protectedEntry;
   const allowed: Record<string, unknown> = {};
   for (const k of ["entry_date", "book", "type", "division", "detail", "memo", "amount", "currency", "source"]) {
     if (k in b.patch) allowed[k] = b.patch[k];
@@ -105,6 +104,7 @@ export async function DELETE(req: Request) {
   const c = await checkPass(req); if (!c.ok) return c.res;
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id 필요" }, { status: 400 });
+  const protectedEntry=await checkApprovedLink(id);if(protectedEntry)return protectedEntry;
   const { error } = await sb.from("may_ledger").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

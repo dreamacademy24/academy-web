@@ -25,8 +25,10 @@ export default function EngHubPage() {
   const [loading, setLoading] = useState(false);
   const [certificateAccount, setCertificateAccount] = useState<string | null>(null);
   const [hrAccount, setHrAccount] = useState<string | null>(null);
+  const [expenseAccount,setExpenseAccount]=useState<string|null>(null);
   useEffect(() => {
     setHrAccount(null);
+    setExpenseAccount(null);
     setCertificateAccount(null);
     if (!staff) return;
     let cancelled = false;
@@ -34,6 +36,7 @@ export default function EngHubPage() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const account = data?.staff;
+        if(!cancelled&&account?.role==='local_teacher'&&account.username===staff.username&&['admin-abby','admin-bella'].includes(account.username))setExpenseAccount(account.username);
           if (!cancelled && account?.role === "local_teacher" && account.username === staff.username && ["admin-abby", "admin-axl"].includes(account.username)) setCertificateAccount(account.username);
         if (!cancelled && account?.role === "local_teacher" && account.username === staff.username && ["admin-abby", "admin-bella"].includes(account.username)) setHrAccount(account.username);
       }).catch(() => {});
@@ -132,6 +135,7 @@ export default function EngHubPage() {
   }
 
   const cards = [
+    ...(staff&&expenseAccount===staff.username?[{icon:'EXP',title:'Expenses',desc:'Add expense · My submissions · Classification guide',href:'/admineng/expenses'}]:[]),
     ...(staff && certificateAccount === staff.username ? [{ icon: "📜", title: "Certificates", desc: "Admission letters · Forms · Print / PDF", href: "/admineng/certificates" }] : []),
     { icon: "ME", title: "Personal profile · Pay", desc: "My details · Timecard · Send to HR · Payslips", href: "/admineng/my-profile" },
     ...(staff && hrAccount === staff.username ? [{ icon: "HR", title: "HR · Payroll", desc: "Employee records · Payroll · HR sign-in", href: "/admin/HR" }] : []),

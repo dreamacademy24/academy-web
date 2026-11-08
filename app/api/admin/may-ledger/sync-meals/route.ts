@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { getStaffIdentity } from "@/lib/portalAuth";
+import { requireExpenseOwner, expenseErrorResponse } from "@/lib/expenses/auth";
 
 // 게스트(올인원/엄마) 식대를 모리 '발생분(auto_meal)'으로 손익장부에 반영하는 CEO 전용 엔드포인트.
 // 계산은 meal-plan 페이지(사이트 인원)에서 그대로 넘어오고, 여기선 그 주 auto_meal을 지우고 재기록(멱등).
@@ -9,7 +9,6 @@ const sb = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const CEO_USERS = ["admin-ceo", "admin-may"];
 
 function addD(s: string, n: number) {
   const [y, m, d] = s.slice(0, 10).split("-").map(Number);
@@ -19,10 +18,7 @@ function addD(s: string, n: number) {
 }
 
 export async function POST(req: Request) {
-  const staff = await getStaffIdentity(req).catch(() => null);
-  if (!staff || !CEO_USERS.includes(staff.username)) {
-    return NextResponse.json({ error: "FORBIDDEN", message: "CEO 계정만 사용할 수 있어요." }, { status: 403 });
-  }
+  try { await requireExpenseOwner(req); } catch(error) { return expenseErrorResponse(error); }
 
   let b: Record<string, unknown>;
   try { b = await req.json(); } catch { return NextResponse.json({ error: "BAD_JSON" }, { status: 400 }); }

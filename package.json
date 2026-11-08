@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/test-online-schedule-visibility.cjs && next build",
+    "build": "node scripts/test-expense-rules.cjs && node scripts/test-online-schedule-visibility.cjs && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:expenses": "node scripts/test-expense-rules.cjs"
   },
   "dependencies": {
     "@portone/browser-sdk": "^0.1.8",
