@@ -11,7 +11,7 @@ function _staffThreadComposer(root,t,draft,input){
   var box=document.createElement('div');box.className='swt-thread-composer';input.before(box);
   box.innerHTML='<div class="swt-reply-target"></div><div class="swt-mention-chips"></div><button type="button" data-tag-open>@ 직원 태그</button><div class="swt-tag-picker" hidden><label>태그할 직원 검색<input type="search" placeholder="직원 이름 검색"></label><div class="swt-tag-options"></div><button type="button" data-tag-close>닫기</button></div>';
   var picker=box.querySelector('.swt-tag-picker'),search=picker.querySelector('input'),options=box.querySelector('.swt-tag-options');
-  function candidates(){return ALL.filter(function(p){return p.id!=='jun'&&(!t.secret||p.id===t.createdBy||p.id===t.assignee||(t.assignees||[]).includes(p.id));});}
+  function candidates(){return ALL.filter(function(p){return p.id!=='jun'&&(!t.secret||p.id===t.createdBy||p.id===t.assignee||(t.assignees||[]).includes(p.id));}).concat([getP("system")]);}
   function render(){
     var target=(taskComments[t.id]||[]).find(function(c){return String(c.id)===String(draft.parentId);});
     box.querySelector('.swt-reply-target').innerHTML=draft.parentId?'<b>'+_staffSafe(target?(getP(target.author)||{}).name||target.author:'원래 댓글')+'님에게 답글 작성 중</b><button type="button" data-reply-cancel>답글 취소</button>':'';

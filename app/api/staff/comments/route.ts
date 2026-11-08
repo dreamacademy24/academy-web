@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { portalDb, workspaceStaffIdentity } from '@/lib/portalAuth';
 import {commentAccess,validateCommentPhotos} from '@/lib/staffCommentMedia';
 import {commentThreadContext,notifyTaskComment} from '@/lib/staffCommentThreads';
+import {answerDreamMention} from '@/lib/staffDreamReply';
+export const maxDuration=60;
 import {isDeepStrictEqual} from 'node:util';
 
 async function mutate(req: Request, deleting: boolean) {
@@ -40,7 +42,12 @@ export async function POST(req:Request){try{
  if((!text&&!files.length)||text.length>20000||typeof body.id!=='string'||!/^[a-f\d-]{36}$/i.test(body.id))return NextResponse.json({error:'댓글 내용 또는 사진을 입력해주세요.'},{status:400});
  const ctx=await commentThreadContext(db,body.taskId,body.mentionIds||[],body.parentId||null);
  const prior=await db.from('staff_task_comments').select('id,task_id,from_id,text,ts,files,parent_id,mention_ids').eq('id',body.id).maybeSingle();if(prior.error)throw Error('저장 상태를 확인하지 못했습니다.');
- if(prior.data){if(prior.data.task_id!==body.taskId||prior.data.from_id!==author||prior.data.text!==text||!isDeepStrictEqual(prior.data.files,files)||prior.data.parent_id!==(body.parentId||null)||!isDeepStrictEqual(prior.data.mention_ids,ctx.mentions))return NextResponse.json({error:'이미 등록된 댓글과 내용이 다릅니다. 목록에서 등록 결과를 확인한 뒤 수정해주세요.'},{status:409});await notifyTaskComment(db,author,prior.data,ctx);return NextResponse.json({comment:prior.data});}
+ if(prior.data){if(prior.data.task_id!==body.taskId||prior.data.from_id!==author||prior.data.text!==text||!isDeepStrictEqual(prior.data.files,files)||prior.data.parent_id!==(body.parentId||null)||!isDeepStrictEqual(prior.data.mention_ids,ctx.mentions))return NextResponse.json({error:'이미 등록된 댓글과 내용이 다릅니다. 목록에서 등록 결과를 확인한 뒤 수정해주세요.'},{status:409});await notifyTaskComment(db,author,prior.data,ctx);return respond(prior.data);}
  const saved=await db.from('staff_task_comments').insert({id:body.id,task_id:body.taskId,from_id:author,text,files,ts:Date.now(),parent_id:body.parentId||null,mention_ids:ctx.mentions}).select('id,task_id,from_id,text,ts,files,parent_id,mention_ids').single();
- if(saved.error)throw Error('댓글을 저장하지 못했습니다. 입력 내용은 유지됩니다.');await notifyTaskComment(db,author,saved.data,ctx);return NextResponse.json({comment:saved.data});
+ if(saved.error)throw Error('댓글을 저장하지 못했습니다. 입력 내용은 유지됩니다.');await notifyTaskComment(db,author,saved.data,ctx);return respond(saved.data);
+ async function respond(comment:NonNullable<typeof prior.data>){
+   if(!ctx.mentions.includes('system')&&ctx.parent?.from_id!=='system')return NextResponse.json({comment});
+   try{return NextResponse.json({comment,reply:await answerDreamMention(db,comment)});}
+   catch{return NextResponse.json({error:'질문은 저장했습니다. 드림이 답변을 받으려면 같은 내용으로 등록을 다시 눌러주세요.'},{status:503});}
+ }
  }catch(e){return NextResponse.json({error:(e as Error).message||'댓글 저장에 실패했습니다.'},{status:(e as any).status||400});}}

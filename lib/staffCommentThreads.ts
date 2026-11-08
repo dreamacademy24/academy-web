@@ -13,7 +13,7 @@ export async function commentThreadContext(db:Db,taskId:string,mentionIds:unknow
  if(accounts.error)throw Error('직원 목록을 확인하지 못했습니다.');
  const active=new Map((accounts.data||[]).map(p=>[p.username.replace(/^admin-/,''),p.name]));active.delete('jun');
  const mentions=[...new Set(mentionIds as string[])];
- if(mentions.some(id=>!active.has(id)||(task.secret&&!people.includes(id))))throw Error('이 업무를 볼 수 있는 재직 직원만 태그할 수 있습니다.');
+ if(mentions.some(id=>id!=='system'&&(!active.has(id)||(task.secret&&!people.includes(id)))))throw Error('이 업무를 볼 수 있는 재직 직원만 태그할 수 있습니다.');
  let parent=null;
  if(parentId){
   if(typeof parentId!=='string'||parentId.length>200)throw Error('답글을 남길 댓글을 확인해주세요.');
