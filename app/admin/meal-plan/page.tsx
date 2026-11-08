@@ -155,6 +155,47 @@ export default function MealPlanPage() {
 
   /* 이번 주 월~금 */
   const weekMon = mondayOf(baseDate);
+  const [roomHistory, setRoomHistory] = useState<Record<string, string>>({});
+  const [roomsReady, setRoomsReady] = useState(false);
+  useEffect(() => {
+    if (!authed) return;
+    let active = true;
+    async function loadRooms() {
+      const history: Record<string, string> = {};
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from("app_settings").select("key,value")
+          .like("key", "meal-jpark-room:%").order("key").range(offset, offset + 499);
+        if (!active) return;
+        if (error) { setToast("객실 번호를 불러오지 못했습니다: " + error.message); return; }
+        for (const row of data) history[row.key] = String(row.value?.room ?? "");
+        if (data.length < 500) break;
+      }
+      setRoomHistory(history);
+      setRoomsReady(true);
+    }
+    void loadRooms();
+    return () => { active = false; };
+  }, [authed]);
+  const weekRooms = useMemo(() => {
+    const result: Record<string, string> = {};
+    for (const key of Object.keys(roomHistory).sort()) {
+      const [, booking, week] = key.split(":");
+      if (week <= weekMon) result[booking] = roomHistory[key];
+    }
+    return result;
+  }, [roomHistory, weekMon]);
+  function mealAddress(location: string | null, id: string) {
+    return location === "JPARK" && weekRooms[id] ? "JPARK " + weekRooms[id] : location;
+  }
+  async function saveRoom(id: string, value: string) {
+    const room = value.trim();
+    if (room === (weekRooms[id] || "")) return;
+    const key = "meal-jpark-room:" + id + ":" + weekMon;
+    const { error } = await supabase.from("app_settings").upsert({ key, value: { room }, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    if (error) { setToast("객실 번호 저장 실패: " + error.message); return; }
+    setRoomHistory(prev => ({ ...prev, [key]: room }));
+    setToast("객실 번호를 저장했습니다.");
+  }
   /* 주간 명단 마감 — app_settings meal_week_close: { [weekMon]: {by,at} } */
   const [weekClose, setWeekClose] = useState<Record<string, { by: string; at: string }>>({});
   useEffect(() => {
@@ -237,7 +278,7 @@ export default function MealPlanPage() {
       const kids = kidsCount(b);
       const adultsByDay = weekDates.map((d, i) => locByDay[i] ? adultsOn(b, d) : 0);
       const adultsSet = [...new Set(adultsByDay.filter(n => n > 0))];
-      const addr = [...new Set(locByDay.filter(Boolean))].join(" → ");
+      const addr = [...new Set(locByDay.filter(Boolean).map(loc => mealAddress(loc, b.id)))].join(" → ");
       const notes: string[] = [];
       if (cur >= total) notes.push("⚠ Last week");
       else if (cur === 1) notes.push("🆕 New");
@@ -249,7 +290,7 @@ export default function MealPlanPage() {
     }).filter(Boolean) as Array<{ b: Bk; room: { bld: number; lot: number; label: string }; sortBld: number; segs: MealSeg[]; mIn: string; mOut: string; cur: number; total: number; kids: number; locByDay: (string | null)[]; adultsByDay: number[]; adultsSet: number[]; addr: string; note: string; stay: string }>;
     rows.sort((x, y) => x.sortBld - y.sortBld || x.room.lot - y.room.lot);
     return rows;
-  }, [bookings, weekMon, weekFri, weekDates, exclusions]);
+  }, [bookings, weekMon, weekFri, weekDates, exclusions, weekRooms]);
 
   /* 다음 주 입퇴소 예고 */
   const upcoming = useMemo(() => {
@@ -340,7 +381,7 @@ export default function MealPlanPage() {
         ...dayRows.map(g => {
           const dOnly = g.locByDay[di] === "CUBE9";
           const bl = dOnly ? "—" : "";
-          return [engName(g.b), g.locByDay[di], g.adultsByDay[di], g.kids, bl, bl, bl, bl, bl, bl, bl, bl, "", "", "", "", dOnly ? "🌙 Dinner only" : g.note];
+          return [engName(g.b), mealAddress(g.locByDay[di], g.b.id), g.adultsByDay[di], g.kids, bl, bl, bl, bl, bl, bl, bl, bl, "", "", "", "", dOnly ? "🌙 Dinner only" : g.note];
         }),
       ];
       aoa.push(["TOTAL", "", dayRows.reduce((s, g) => s + g.adultsByDay[di], 0), dayRows.reduce((s, g) => s + g.kids, 0)]);
@@ -566,7 +607,13 @@ export default function MealPlanPage() {
                 {guests.map(g => (
                   <tr key={g.b.id}>
                     <td className="nm">{engName(g.b)}<span className="kr">{g.b.booker_name}</span></td>
-                    <td>{g.addr}</td>
+                    <td>{g.addr}{g.locByDay.includes("JPARK") && <div className="no-print"><input
+                      key={weekMon + ":" + (weekRooms[g.b.id] || "")} aria-label={g.b.booker_name + " 제이파크 객실 번호"}
+                      placeholder="객실 번호" disabled={!roomsReady} maxLength={40} defaultValue={weekRooms[g.b.id] || ""}
+                      onBlur={e => void saveRoom(g.b.id, e.currentTarget.value)}
+                      onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                      style={{ width: 90, maxWidth: "100%", padding: "3px 6px", border: "1px solid #cbd5e1", borderRadius: 5 }}
+                    /></div>}</td>
                     <td><span className="adult-edit no-print-style" onClick={() => openGs(g.b)} title="보호자 체류 기간 수정">{g.adultsSet.join(" → ")}</span></td>
                     <td>{g.kids}</td>
                     <td>{g.stay}</td>
@@ -638,7 +685,7 @@ export default function MealPlanPage() {
                 <tbody>
                   {dayGuests.map(g => (
                     <tr key={g.b.id} style={{ height: 30 }}>
-                      <td className="nm">{engName(g.b)}</td><td>{g.locByDay[di]}</td>
+                      <td className="nm">{engName(g.b)}</td><td>{mealAddress(g.locByDay[di], g.b.id)}</td>
                       <td style={{ fontWeight: 700 }}>{g.adultsByDay[di]}</td><td style={{ fontWeight: 700 }}>{g.kids}</td>
                       {Array.from({ length: 12 }).map((_, i) => {
                         const dOnly = g.locByDay[di] === "CUBE9" && i < 8; // 큐브 = 아침·점심 없음
@@ -699,7 +746,7 @@ export default function MealPlanPage() {
                                 {!isJp && !isCube && g.room.bld === 17 && <div className="h">DREAMHOUSE</div>}
                                 {isJp && <div className="h" style={{ color: "#6d28d9" }}>JPARK</div>}
                                 {isCube && <div className="h" style={{ color: "#0e7490" }}>CUBE 9 · DINNER</div>}
-                                <div className="rm">{isJp ? "JPARK" : isCube ? "CUBE9" : `B${g.room.bld}  L${g.room.lot}`}</div>
+                                <div className="rm">{isJp ? weekRooms[g.b.id] || "JPARK" : isCube ? "CUBE9" : `B${g.room.bld}  L${g.room.lot}`}</div>
                                 <div className="ct">{mi === 1 && !holi ? `${g.adultsByDay[idx]}` : `${g.adultsByDay[idx]} + ${g.kids}`}</div>
                               </div>)}
                             </td>
