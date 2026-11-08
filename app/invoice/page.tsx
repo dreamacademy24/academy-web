@@ -2698,7 +2698,7 @@ function InvoicePageInner(){
             <div style={{fontSize:12,color:"#6b7c93",lineHeight:1.9,marginTop:20}}>
               안내받으신 종합안내 이용금액 및 환불 규정을 꼭 확인해주세요<br/>
               미확인으로 인한 문제는 책임 지지않습니다<br/>
-              {isCommute?"통학형 프로그램":a1T==="dreamhouse"||cm==="combo"?"드림아카데미 패키지":a1T==="jpark"?"제이파크 패키지":a1T==="cubenine"?"큐브나인 패키지":"드림아카데미 패키지"} 이용금액 전체 결제하였음을 증명합니다<br/>
+              지불내역에 기재된 금액을 영수했습니다.<br/>
               해당영수증에 대한 문의사항이 있으시면 드림아카데미로 문의주세요<br/>
               감사합니다
             </div>
