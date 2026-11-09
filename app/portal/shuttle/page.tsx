@@ -8,7 +8,7 @@ import { resolveComboAccom } from "@/lib/bookingTypes";
 import { toastOk, toastErr } from "@/lib/toast";
 
 // ── 셔틀 자동 생성 헬퍼 (public/shuttle 와 동일) ────────────────────
-import { SHUTTLE_SPECIAL_MSG, type ShSlot } from "@/lib/shuttleTours";
+import { shuttleMonthKeys, SHUTTLE_SPECIAL_MSG, type ShSlot } from "@/lib/shuttleTours";
 
 import { usePublishedShuttle } from "@/lib/usePublishedShuttle";
 
@@ -69,7 +69,7 @@ function buildShWeeks(year: number, month: number, getShSlots: (date: string) =>
   return weeks;
 }
 
-const ALL_MONTHS = ['5','6','7','8','9','10','11','12'];
+const ALL_MONTHS = shuttleMonthKeys('2026-05', (new Date().getFullYear()+1)+'-12');
 
 interface PortalSession { booking_id: string; guest_name: string; expires: number }
 
@@ -118,16 +118,7 @@ export default function PortalShuttlePage() {
   // 예약 기간 내 월만 노출 + 첫 월 기본 선택
   const visibleMonths = (() => {
     if (!bookingMeta?.checkin || !bookingMeta?.checkout) return ALL_MONTHS;
-    const sM = parseInt(bookingMeta.checkin.slice(5, 7), 10);
-    const eM = parseInt(bookingMeta.checkout.slice(5, 7), 10);
-    const sY = parseInt(bookingMeta.checkin.slice(0, 4), 10);
-    const eY = parseInt(bookingMeta.checkout.slice(0, 4), 10);
-    return ALL_MONTHS.filter(m => {
-      const mi = parseInt(m, 10);
-      const inS = sY < 2026 || (sY === 2026 && mi >= sM);
-      const inE = eY > 2026 || (eY === 2026 && mi <= eM);
-      return inS && inE;
-    });
+    return shuttleMonthKeys(bookingMeta.checkin.slice(0,7), bookingMeta.checkout.slice(0,7));
   })();
 
   useEffect(() => {
@@ -562,14 +553,14 @@ export default function PortalShuttlePage() {
                   <p className="label-sub">이용하실 날짜와 장소를 <strong>복수 선택</strong>할 수 있습니다. <span style={{ color: '#c2410c', fontWeight: 600 }}>주황색</span>은 주말 일정입니다.</p>
                   <div className="month-toggle">
                     {visibleMonths.map(m => (
-                      <button key={m} type="button" data-active={activeMonth === m ? "true" : "false"} onClick={() => setActiveMonth(m)}>{m}월</button>
+                      <button key={m} type="button" data-active={activeMonth === m ? "true" : "false"} onClick={() => setActiveMonth(m)}>{m.slice(0,4)}년 {Number(m.slice(5))}월</button>
                     ))}
                   </div>
                   <div className="month-schedules">
-                    {visibleMonths.includes(activeMonth) && buildShWeeks(2026, parseInt(activeMonth, 10), getSlots, bookingMeta?.checkin, bookingMeta?.checkout).map((wk, wi) => {
+                    {visibleMonths.includes(activeMonth) && buildShWeeks(Number(activeMonth.slice(0,4)), Number(activeMonth.slice(5)), getSlots, bookingMeta?.checkin, bookingMeta?.checkout).map((wk, wi) => {
                       const key = `${activeMonth}-${wi+1}`;
                       const isOpen = !!accordionState[key];
-                      const m = parseInt(activeMonth, 10);
+                      const m = Number(activeMonth.slice(5));
                       if (wk.items.length === 0) return null;
                       return (
                         <div key={key} className="week-accordion">

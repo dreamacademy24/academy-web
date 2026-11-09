@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
 // ── 셔틀 자동 생성 헬퍼 ────────────────────────────────────────
-import { SHUTTLE_SPECIAL_MSG, type ShSlot } from "@/lib/shuttleTours";
+import { shuttleMonthKeys, SHUTTLE_SPECIAL_MSG, type ShSlot } from "@/lib/shuttleTours";
 
 import { usePublishedShuttle } from "@/lib/usePublishedShuttle";
 
@@ -48,13 +48,13 @@ function buildShWeeks(year: number, month: number, getShSlots: (date: string) =>
   return weeks;
 }
 
-const ACTIVE_MONTHS = ['5','6','7','8','9','10','11','12'];
+const ACTIVE_MONTHS = shuttleMonthKeys('2026-05', (new Date().getFullYear()+1)+'-12');
 
 export default function ShuttlePage() {
   const { getSlots, loading: scheduleLoading, error: scheduleError } = usePublishedShuttle();
   const [modalHidden, setModalHidden] = useState(false);
   const [modalHiding, setModalHiding] = useState(false);
-  const [activeMonth, setActiveMonth] = useState("5");
+  const [activeMonth, setActiveMonth] = useState(ACTIVE_MONTHS.find(m=>m>=new Date().toISOString().slice(0,7)) || ACTIVE_MONTHS[0]);
   const [accordionState, setAccordionState] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -441,14 +441,14 @@ export default function ShuttlePage() {
                   <p className="label-sub">이용하실 날짜와 장소를 <strong>복수 선택</strong>할 수 있습니다. <span style={{ color: '#c2410c', fontWeight: 600 }}>주황색</span>은 주말 일정입니다.</p>
                   <div className="month-toggle">
                     {ACTIVE_MONTHS.map(m => (
-                      <button key={m} type="button" data-active={activeMonth === m ? "true" : "false"} onClick={() => setActiveMonth(m)}>{m}월</button>
+                      <button key={m} type="button" data-active={activeMonth === m ? "true" : "false"} onClick={() => setActiveMonth(m)}>{m.slice(0,4)}년 {Number(m.slice(5))}월</button>
                     ))}
                   </div>
                   <div className="month-schedules">
-                    {ACTIVE_MONTHS.includes(activeMonth) && buildShWeeks(2026, parseInt(activeMonth, 10), getSlots).map((wk, wi) => {
+                    {ACTIVE_MONTHS.includes(activeMonth) && buildShWeeks(Number(activeMonth.slice(0,4)), Number(activeMonth.slice(5)), getSlots).map((wk, wi) => {
                       const key = `${activeMonth}-${wi+1}`;
                       const isOpen = !!accordionState[key];
-                      const m = parseInt(activeMonth, 10);
+                      const m = Number(activeMonth.slice(5));
                       return (
                         <div key={key} className="week-accordion">
                           <button type="button" className="week-accordion-btn" data-open={isOpen ? "true" : "false"} onClick={() => toggleAccordion(key)}>

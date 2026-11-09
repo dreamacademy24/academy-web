@@ -17,6 +17,17 @@ export const SHUTTLE_SPECIAL_MSG: Record<string,string> = {
 
 export interface ShSlot { time: string; name: string; return: string; note?: string; }
 
+export function shuttleMonthKeys(first: string, last: string): string[] {
+  const result: string[] = [];
+  const cursor = new Date(first + '-01T00:00:00Z');
+  const end = new Date(last + '-01T00:00:00Z');
+  while (cursor <= end) {
+    result.push(cursor.toISOString().slice(0,7));
+    cursor.setUTCMonth(cursor.getUTCMonth()+1);
+  }
+  return result;
+}
+
 export function weekendPark(date: string, saturday: boolean) {
   const anjo = date >= '2027-01-01' ? saturday : !saturday;
   return anjo
