@@ -3781,6 +3781,7 @@ function createNotif(toId,type,refId,message){
   if(!toId||toId==='jun'||toId===('admin-jun')||toId===(CU&&CU.id))return;
   sbPost('staff_notifications',{id:uid(),to_id:toId,type:type,ref_id:refId||'',message:message,is_read:false,created_at:new Date().toISOString()}).catch(function(e){console.error('notif err',e);});
 }
+function isRoutineUpdateNotice(notice){return /^\s*\[(?:새 기능 안내|수정 안내)\]/.test(String(notice.title||notice.text||'').trim());}
 function createNotifMultiple(toIds,type,refId,message){
   toIds.forEach(function(id){createNotif(id,type,refId,message);});
 }
@@ -5530,7 +5531,7 @@ async function _ntSubmit(){
     rememberNotice(saved);
     var ov=document.getElementById('ntFormOv');if(ov)ov.remove();_ntFiles=[];_ntDraftId=null;
     renderAnnouncementsPage();renderNotices();
-    createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',saved.id,'새 공지: '+(title.trim()||plain).slice(0,30));
+    if(!isRoutineUpdateNotice(saved))createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',saved.id,'새 공지: '+(title.trim()||plain).slice(0,30));
     return true;
   }catch(e){if(CU===actor)toast(e.message||'공지를 저장하지 못했습니다. 다시 시도해주세요.','#ef4444');return false;}
   finally{_ntSaving=false;if(button){button.disabled=false;button.textContent='공지 등록';}}
@@ -9639,7 +9640,7 @@ async function saveNotice(){
     rememberNotice(saved);_nmDraftId=null;
     input.value='';document.getElementById('nmRequireRead').checked=false;document.getElementById('nmTeacherShared').checked=false;
     closeM('noticeModal');renderNotices();renderAnnouncementsPage();
-    createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',saved.id,'새 공지: '+text.slice(0,30));
+    if(!isRoutineUpdateNotice(saved))createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',saved.id,'새 공지: '+text.slice(0,30));
     return true;
   }catch(e){if(CU===actor)toast(e.message||'공지를 저장하지 못했습니다. 다시 시도해주세요.','#ef4444');return false;}
   finally{_nmSaving=false;if(button){button.disabled=false;button.textContent='등록';}}
