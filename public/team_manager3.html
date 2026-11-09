@@ -9821,7 +9821,7 @@ function renderAssignPicker(){
   h+='<div onclick="event.stopPropagation();toggleAssign(\'\')" style="padding:8px 12px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;'+(unsel?'background:var(--primary-l);font-weight:700':'')+'">';
   h+='<span style="width:22px;height:22px;border-radius:50%;background:var(--surface2);display:inline-flex;align-items:center;justify-content:center;font-size:10px">—</span> 미배정</div>';
   h+='<div style="border-top:1px solid var(--border);margin:6px 0"></div>';
-  ALL.forEach(function(u){
+  ALL.filter(function(u){return u.id!=='system';}).concat(getP('system')).forEach(function(u){
     var sel=_assignSelected.has(u.id);
     h+='<div onclick="event.stopPropagation();toggleAssign(\''+u.id+'\')" style="padding:8px 12px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;'+(sel?'background:var(--primary-l);font-weight:700':'')+'">';
     h+='<span style="width:22px;height:22px;border-radius:50%;background:'+u.color+';display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">'+u.initial+'</span>';
