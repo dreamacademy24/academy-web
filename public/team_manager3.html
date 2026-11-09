@@ -4587,7 +4587,7 @@ function _smartSubsHtml(itemId,ymd,names,checkSet,opt){
   names.forEach(function(nm){
     var r=checkSet&&checkSet[ymd+'|'+_subKey(itemId,nm)];var dn=!!r;if(dn)done++;
     h+='<label style="display:inline-flex;align-items:center;gap:5px;font-size:'+fs+';background:'+(dn?'#f0fdf4':'#f1f5f9')+';color:'+(dn?'#15803d':'#334155')+';border-radius:6px;padding:2px 8px;cursor:pointer;'+(dn?'text-decoration:line-through;':'')+'">'+
-      '<input type="checkbox" '+(dn?'checked':'')+' onchange="toggleSmartSub(\''+itemId+'\',\''+ymd+'\',\''+esc(nm).replace(/'/g,"\\'")+'\','+JSON.stringify(names).replace(/"/g,'&quot;')+',this)" style="width:13px;height:13px;accent-color:#16a34a;cursor:pointer">'+esc(nm)+'</label>';
+      '<input type="checkbox" '+(dn?'checked':'')+' onchange="toggleSmartSub(\''+itemId+'\',\''+ymd+'\',\''+esc(nm).replace(/'/g,"\\'")+'\','+JSON.stringify(names).replace(/"/g,'&quot;')+',this)" style="width:13px;height:13px;accent-color:#16a34a;cursor:pointer">'+esc(nm)+(r&&r.checked_by==='system'?' <strong style="color:#15803d;text-decoration:none;display:inline-block">시스템완 · 드림이</strong>':'')+'</label>';
   });
   h+='<span style="font-size:10px;color:#94a3b8;align-self:center">'+done+'/'+names.length+'</span></div>';
   return h;
@@ -4815,7 +4815,7 @@ function openWeeklyForm(presetDow,editItem){
 }
 function _wkAssChipsHtml(sel){
   var selected=_clAssignees(sel);
-  var chips=[{id:'all',name:'전체',color:'#64748b'}].concat(ALL.map(function(e){return {id:e.id,name:e.name,color:e.color};}));
+  var chips=[{id:'all',name:'전체',color:'#64748b'},{id:'system',name:'드림이',color:'#b8860b'}].concat(ALL.filter(function(e){return e.id!=='system';}).map(function(e){return {id:e.id,name:e.name,color:e.color};}));
   return chips.map(function(c){
     var on=selected.indexOf(c.id)>=0;
     return '<span class="wk-ass-chip" data-emp="'+c.id+'" data-on="'+(on?'1':'0')+'" onclick="_wkToggleAss(this)" style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer;border:1.5px solid '+(on?c.color:'#e2e8f0')+';background:'+(on?c.color+'1a':'#fff')+';color:'+(on?c.color:'#64748b')+'">'+esc(c.name)+'</span>';
@@ -4852,7 +4852,7 @@ function _wkCollectAss(){
 /* 담당자 다중선택 (범용) — 데일리 항목 수정/추가에서 사용. 토글은 el.parentElement 기준이라 row id 무관 */
 function _assChipsHtml(sel){
   var selected=_clAssignees(sel);
-  var chips=[{id:'all',name:'전체',color:'#64748b'}].concat(ALL.map(function(e){return {id:e.id,name:e.name,color:e.color};}));
+  var chips=[{id:'all',name:'전체',color:'#64748b'},{id:'system',name:'드림이',color:'#b8860b'}].concat(ALL.filter(function(e){return e.id!=='system';}).map(function(e){return {id:e.id,name:e.name,color:e.color};}));
   return chips.map(function(c){
     var on=selected.indexOf(c.id)>=0;
     return '<span data-emp="'+c.id+'" data-on="'+(on?'1':'0')+'" onclick="_assToggle(this)" style="font-size:12px;font-weight:700;padding:5px 11px;border-radius:8px;cursor:pointer;border:1.5px solid '+(on?c.color:'#e2e8f0')+';background:'+(on?c.color+'1a':'#fff')+';color:'+(on?c.color:'#64748b')+'">'+esc(c.name)+'</span>';
