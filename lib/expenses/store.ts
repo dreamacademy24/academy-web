@@ -1,0 +1,9 @@
+import {portalDb} from '@/lib/portalAuth';
+import type {ExpenseClaim,ReceiptMeta} from './model';
+import {ExpenseHttpError} from './auth';
+export const RECEIPT_BUCKET='expense-receipts-v1';
+export const CLAIM_FIELDS='id,idempotency_key,entry_date,applicable_period,unit,kind,direction,category_id,merchant,memo,amount,currency,house_scope,house_ids,house_note,allocations,receipt_note,review_flags,replaces_claim_id,submitted_by,staff_name,staff_username,status,created_at,reviewed_at,review_note,ledger_entry_id,reporting_amount_php,receipts';
+export function publicClaim(row:Record<string,unknown>):ExpenseClaim {const receipts=Array.isArray(row.receipts)?row.receipts:[];const copy:Record<string,unknown>={};for(const field of CLAIM_FIELDS.split(','))if(field!=='receipts')copy[field]=row[field];copy.amount=String(row.amount);copy.reporting_amount_php=row.reporting_amount_php==null?null:String(row.reporting_amount_php);copy.receipt_count=receipts.length;return copy as unknown as ExpenseClaim;}
+export function receiptMime(bytes:Uint8Array):string|null {if(bytes.length>=3&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255)return'image/jpeg';if(bytes.length>=8&&[137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v))return'image/png';if(bytes.length>=12&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP')return'image/webp';return null;}
+export async function cleanupReceipts(receipts:ReceiptMeta[]) {try{if(receipts.length)await portalDb().storage.from(RECEIPT_BUCKET).remove(receipts.map(r=>r.object_key));}catch{/* Failed cleanup must not obscure the original save result; orphan cleanup is operational. */}}
+export function ensureDatabase(error:unknown) {if(error)throw new ExpenseHttpError(503,'지출 저장소 설정·연결을 확인해야 합니다. / Expense storage needs setup or is unavailable.');}

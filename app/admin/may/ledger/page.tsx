@@ -18,7 +18,6 @@ const CO_ACCT: [string, string, boolean][] = [
   ["모리", "모리 식대", true], ["드림하우스", "드림하우스", false], ["재료비", "재료비", false],
   ["인건비", "인건비", false], ["비품", "비품", false], ["기타", "기타", false],
 ];
-const PASS_KEY = "mayLedgerPass";
 
 const moriKindOf = (r: Row): MoriKind => {
   if (r.division !== "모리") return null;
@@ -135,8 +134,6 @@ const wonP = (n: number) => "₱" + Math.round(n).toLocaleString("en-US");
 export default function MayLedgerPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
-  const [pass, setPass] = useState("");
-  const [passInput, setPassInput] = useState("");
   const [gate, setGate] = useState("");
   const [unlocked, setUnlocked] = useState(false);
 
@@ -168,24 +165,22 @@ export default function MayLedgerPage() {
     if (!isAdminAuthed()) { router.replace("/login"); return; }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAuthed(true);
-    const saved = typeof window !== "undefined" ? sessionStorage.getItem(PASS_KEY) : null;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (saved) setPass(saved);
+    // Signed HttpOnly owner session only. A shared ledger password grants no access.
+    try { sessionStorage.removeItem('mayLedgerPass'); } catch {}
   }, [router]);
 
   const api = useCallback((method: string, opts: { qs?: string; body?: unknown; pass?: string } = {}) => {
-    const p = opts.pass ?? pass;
     return fetch("/api/admin/may-ledger" + (opts.qs || ""), {
       method,
-      headers: { "x-ledger-pass": p, ...(opts.body ? { "Content-Type": "application/json" } : {}) },
+      headers: { ...(opts.body ? { "Content-Type": "application/json" } : {}) },
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     });
-  }, [pass]);
+  }, []);
 
-  const load = useCallback(async (p?: string) => {
-    const res = await api("GET", { pass: p });
-    if (res.status === 401) { setUnlocked(false); setGate("May 로그인 확인이 필요하거나 장부 암호가 올바르지 않습니다."); return false; }
-    if (res.status === 503) { const d = await res.json().catch(() => ({})); setUnlocked(false); setGate(d.message || "서버 암호 미설정"); return false; }
+  const load = useCallback(async () => {
+    const res = await api("GET");
+    if (res.status === 401 || res.status === 403) { setUnlocked(false); setItems([]); setGate("대표 계정으로 로그인해야 원장을 볼 수 있습니다. 직원 계정과 장부 암호로는 열 수 없습니다."); return false; }
+    if (res.status === 503) { const d = await res.json().catch(() => ({})); setUnlocked(false); setGate(d.message || "원장 연결 확인이 필요합니다."); return false; }
     if (!res.ok) { setGate("불러오기 실패"); return false; }
     const d = await res.json();
     setItems((d.items || []).map((r: Row) => ({ ...r, amount: Number(r.amount) })));
@@ -195,13 +190,7 @@ export default function MayLedgerPage() {
   }, [api]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { if (authed) load(pass); }, [authed, pass, load]);
-
-  async function submitPass(e: React.FormEvent) {
-    e.preventDefault();
-    const ok = await load(passInput);
-    if (ok) { setPass(passInput); try { sessionStorage.setItem(PASS_KEY, passInput); } catch {} }
-  }
+  useEffect(() => { if (authed) load(); }, [authed, load]);
 
   const phpOf = useCallback((r: Row) => r.currency === "KRW" ? r.amount / (krwPerPhp || 1) : r.amount, [krwPerPhp]);
   const mkey = (d: string) => (d || "").slice(0, 7);
@@ -241,23 +230,7 @@ export default function MayLedgerPage() {
   if (!authed) return null;
   const setThemeAttr = theme;
 
-  if (!unlocked) {
-    return (
-      <div id="mayledger" data-ml={setThemeAttr || undefined}>
-        <style dangerouslySetInnerHTML={{ __html: CSS }} />
-        <div className="gate">
-          <form onSubmit={submitPass} className="gatebox">
-            <div style={{ fontSize: 19, fontWeight: 800 }}>🔒 드림 재무</div>
-            <div style={{ fontSize: 13, color: "var(--mu)", margin: "6px 0 16px" }}>May 계정으로 로그인하면 자동으로 열립니다. 별도 장부 암호로도 열 수 있습니다.</div>
-            <input type="password" value={passInput} onChange={e => setPassInput(e.target.value)} autoFocus placeholder="암호"
-              style={{ width: "100%", padding: "11px 13px", fontSize: 15, border: "1px solid var(--lns)", borderRadius: 9 }} />
-            {gate && <div style={{ color: "var(--neg)", fontSize: 12.5, marginTop: 8 }}>{gate}</div>}
-            <button type="submit" style={{ width: "100%", marginTop: 14, padding: 11, background: "var(--ac)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>열기</button>
-          </form>
-        </div>
-      </div>
-    );
-  }
+  if (!unlocked) return <div id="mayledger" data-ml={setThemeAttr||undefined}><style dangerouslySetInnerHTML={{__html:CSS}}/><div className="gate"><div className="gatebox"><h2>대표 전용 원장</h2><p>서명된 대표 로그인으로만 열립니다. 아비·벨라는 별도 지출 입력 화면을 사용합니다.</p>{gate&&<p role="alert">{gate}</p>}<a href="/login">대표 로그인</a><button onClick={()=>load()}>로그인 후 다시 확인</button><a href="/admineng/expenses">지출 입력</a></div></div></div>;
 
   // ---- computations ----
   const coRev = sum(r => r.book === "회사" && r.type === "income" && inP(r));
@@ -544,7 +517,8 @@ export default function MayLedgerPage() {
   const txOpts = isCo ? CO_EXP : HOME_DIV;
   const txView = (
     <>
-      <div className="form">
+      {isCo&&fType==="expense"&&<div className="hint">회사 지출 입력은 아비·벨라만 가능합니다. <a href="/admin/may/expenses">제출 건 검토·승인</a> 후 원장에 한 번 반영됩니다. <button onClick={()=>setFType("income")}>수입 직접 입력</button></div>}
+      {(!isCo||fType==="income")&&<div className="form">
         <label><span>날짜</span><input type="date" className="fld" value={fDate} onChange={e => setFDate(e.target.value)} /></label>
         <label><span>유형</span><div className="seg2"><button className={fType === "expense" ? "on exp" : ""} onClick={() => setFType("expense")}>지출</button><button className={fType === "income" ? "on inc" : ""} onClick={() => setFType("income")}>수입</button></div></label>
         <label><span>부문</span><select className="fld" value={fDiv} onChange={e => setFDiv(e.target.value)}>{divOptions.map(o => <option key={o}>{o}</option>)}</select></label>
@@ -559,7 +533,7 @@ export default function MayLedgerPage() {
           : <label style={{ visibility: "hidden" }}><span>.</span><input className="fld" /></label>}
         <label><span>금액</span><div style={{ display: "flex", gap: 5 }}><input type="number" className="fld" style={{ width: 80 }} value={fAmount} onChange={e => setFAmount(e.target.value)} placeholder="0" /><select className="fld" style={{ width: 52 }} value={fCur} onChange={e => setFCur(e.target.value as Cur)}><option value="PHP">₱</option><option value="KRW">₩</option></select></div></label>
         <label><span>&nbsp;</span><button className="addbtn" onClick={addEntry}>추가</button></label>
-      </div>
+      </div>}
       <div className="filters">{txFilters.map(([k, l]) => <button key={k} className={txnFilter === k ? "on" : ""} onClick={() => setTxnFilter(k)}>{l}</button>)}</div>
       <div className="card"><div style={{ overflowX: "auto" }}><table className="txn">
         <thead><tr><th>날짜</th><th>구분</th><th>부문</th><th>세부</th><th>메모</th><th className="r">금액</th><th></th></tr></thead>
@@ -598,6 +572,7 @@ export default function MayLedgerPage() {
         <div className="hdr">
           <div><h1 className="t">{title}</h1><div className="sub">{ws === "회사" ? "드림아카데미" : "메이집"} · 페소(₱) 기준 · 원화 자동환산 · 나만 보는 비공개</div></div>
           <div className="ctrl">
+            <button className="back" style={{marginBottom:0}} onClick={()=>router.push("/admin/may/expenses")}>직원 지출 검토·통합 보고</button>
             {ws === "회사" && <button className="back" style={{marginBottom:0}} onClick={() => {setView("moriSheet");setPeriod("all");}}>모리 전체 한 장</button>}
             <button className="addbtn" onClick={openPrintPreview}>PDF 출력</button>
             {(["apLedger","acct","tx","moriSheet"].includes(view)) && <select aria-label="정렬" className="fld" value={sortMode} onChange={e => setSortMode(e.target.value)}>{Object.entries(sortLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>}
