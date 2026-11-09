@@ -17,6 +17,13 @@ export const SHUTTLE_SPECIAL_MSG: Record<string,string> = {
 
 export interface ShSlot { time: string; name: string; return: string; note?: string; }
 
+export function weekendPark(date: string, saturday: boolean) {
+  const anjo = date >= '2027-01-01' ? saturday : !saturday;
+  return anjo
+    ? { name:'안조 월드 (Anjo World)', time:'1:00pm', return:'20:00', note:'' }
+    : { name:'펀파크 (Fun Park)', time:'2:00pm', return:'20:00', note:'' };
+}
+
 export function nthWeekday(d: Date) { return Math.ceil(d.getDate() / 7); }
 
 export function getShSlots(dateStr: string, extraHolidays?: Set<string>): ShSlot[] | 'holiday' {
@@ -26,8 +33,6 @@ export function getShSlots(dateStr: string, extraHolidays?: Set<string>): ShSlot
   const odd = nthWeekday(d) % 2 === 1;
   const S_HMART    = { time:'10:00am', return:'11:00',          note:'' };
   const S_ILCORSO  = { time:'4:00pm',  return:'2시간 30분 후',   note:'' };
-  const S_ANJO     = { time:'1:00pm',  return:'20:00',           note:'' };
-  const S_FUNPARK  = { time:'2:00pm',  return:'20:00',           note:'' };
   const S_SAFARI   = { time:'8:30am',  return:'15:00',           note:'유료 200페소' };
   const S_SHRINE   = { time:'5:30pm',  return:'40분 후',         note:'' };
   const S_LANTAW   = { time:'4:00pm',  return:'2시간 30분 후',   note:'' };
@@ -45,10 +50,10 @@ export function getShSlots(dateStr: string, extraHolidays?: Set<string>): ShSlot
   if (dow===6) return odd
     ? [{ name:'세부 사파리',           ...S_SAFARI },
        { name:'일콜소 (Il Corso)',     ...S_ILCORSO }]
-    : [{ name:'펀파크 (Fun Park)',     ...S_FUNPARK },
+    : [weekendPark(dateStr,true),
        { name:'란타우 (Lantaw)',       ...S_LANTAW }];
   if (dow===0) return odd
-    ? [{ name:'안조 월드 (Anjo World)',...S_ANJO },
+    ? [weekendPark(dateStr,false),
        { name:'란타우 (Lantaw)',       ...S_LANTAW }]
     : [{ name:'세부 사파리',           ...S_SAFARI },
        { name:'일콜소 (Il Corso)',     ...S_ILCORSO }];

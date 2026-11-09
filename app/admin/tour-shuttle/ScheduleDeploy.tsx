@@ -1,4 +1,5 @@
 "use client";
+import { weekendPark } from '@/lib/shuttleTours';
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { toastErr } from "@/lib/toast";
 import { createClient } from "@supabase/supabase-js";
@@ -30,6 +31,8 @@ function nthWeekday(d: Date) { return Math.ceil(d.getDate() / 7); }
 function tourSlotsFor(d: Date): { title: string; desc: string }[] {
   const dow = d.getDay();
   const odd = nthWeekday(d) % 2 === 1;
+  const park = weekendPark(ymd(d), dow === 6);
+  const parkItem = { title: park.name, desc: park.time.padStart(7, "0") };
   if (dow === 2) return odd
     ? [{ title: "파롤라 (Parola)", desc: "04:40pm" }]
     : [{ title: "SM 씨사이드 쇼핑", desc: "10:30am" }];
@@ -38,9 +41,9 @@ function tourSlotsFor(d: Date): { title: string; desc: string }[] {
     : [{ title: "막탄 쉬라인", desc: "05:30pm" }];
   if (dow === 6) return odd
     ? [{ title: "세부 사파리", desc: "08:30am" }, { title: "일콜소 (Il Corso)", desc: "04:00pm" }]
-    : [{ title: "펀파크 (Fun Park)", desc: "02:00pm" }, { title: "란타우 (Lantaw)", desc: "04:00pm" }];
+    : [parkItem, { title: "란타우 (Lantaw)", desc: "04:00pm" }];
   if (dow === 0) return odd
-    ? [{ title: "안조 월드 (Anjo World)", desc: "01:00pm" }, { title: "란타우 (Lantaw)", desc: "04:00pm" }]
+    ? [parkItem, { title: "란타우 (Lantaw)", desc: "04:00pm" }]
     : [{ title: "세부 사파리", desc: "08:30am" }, { title: "일콜소 (Il Corso)", desc: "04:00pm" }];
   return [];
 }
