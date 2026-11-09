@@ -473,7 +473,7 @@ export default function DreamhouseRooms() {
                           {isDouble && (
                             <div style={{fontSize:9,color:'#dc2626',fontWeight:700}}>중복!</div>
                           )}
-                          {cellBookings.map(guest => (
+                          {cellBookings.filter(guest => guest.checkin_date === dateStr || guest.checkout_date === dateStr).map(guest => (
                             <div key={guest.id} style={{fontSize:11,color:'#334155',fontWeight:600,overflowWrap:'anywhere',padding:'1px 2px 4px'}}>
                               {(isConflict || isDouble) && (guest.checkout_date === dateStr ? '퇴실 ' : guest.checkin_date === dateStr ? '입실 ' : '투숙 ')}
                               {guest.booker_name || guest.reservation_no || '이름 미등록'}
