@@ -4,10 +4,19 @@ const ts=require(process.env.EXPENSE_TYPESCRIPT||'typescript');
 const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(root,'.expense-tests-'));
 let count=0;const ok=x=>{assert.ok(x);count++;},eq=(a,b)=>{assert.deepEqual(a,b);count++;},bad=f=>{assert.throws(f);count++;};
 try{
- for(const name of ['model','catalogue','houses','permissions','validation','report']){const text=fs.readFileSync(path.join(root,'lib/expenses',name+'.ts'),'utf8');const result=ts.transpileModule(text,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}});fs.writeFileSync(path.join(temp,name+'.js'),result.outputText);}
+ for(const name of ['model','catalogue','houses','permissions','validation','report','menu']){const text=fs.readFileSync(path.join(root,'lib/expenses',name+'.ts'),'utf8');const result=ts.transpileModule(text,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}});fs.writeFileSync(path.join(temp,name+'.js'),result.outputText);}
  const p=require(path.join(temp,'permissions.js')),v=require(path.join(temp,'validation.js')),c=require(path.join(temp,'catalogue.js'));
  const owner={id:p.LEDGER_OWNER_ID,username:'admin-ceo',role:'korean_admin',name:'Owner'},abby={id:'11111111-1111-4111-8111-111111111111',username:'admin-abby',role:'local_teacher',name:'Abby'},bella={...abby,id:'22222222-2222-4222-8222-222222222222',username:'admin-bella'};
  ok(p.canSubmitExpense(abby));ok(p.canSubmitExpense(bella));ok(!p.canSubmitExpense(owner));ok(!p.canSubmitExpense({...abby,username:'other'}));ok(!p.canSubmitExpense({...abby,role:'korean_admin'}));ok(p.canReviewExpenses(owner));ok(!p.canReviewExpenses(abby));ok(!p.canReviewExpenses({...owner,id:abby.id}));ok(!p.canReviewExpenses(null));
+ const menu=require(path.join(temp,'menu.js'));
+ for(const actor of [abby,bella,owner,{...abby,username:'other'},null]){
+  const access={canSubmit:p.canSubmitExpense(actor),canReview:p.canReviewExpenses(actor)};
+  eq(menu.maySeeExpenseMenu('submit',access),p.canSubmitExpense(actor));
+  eq(menu.maySeeExpenseMenu('review',access),p.canReviewExpenses(actor));
+ }
+ ok(!menu.maySeeExpenseMenu('unknown',{canSubmit:true,canReview:true}));
+ ok(menu.maySeeExpenseMenu(undefined,{canSubmit:false,canReview:false}));
+ ok(!menu.maySeeExpenseMenu('submit',{canSubmit:'true',canReview:false}));
  eq(c.CATEGORY_GROUPS.length,14);eq(c.CATEGORY_GROUPS.flatMap(g=>g.items).length,44);ok(c.searchExpenseCategories('a').length>0);ok(c.searchExpenseCategories('ac').some(x=>x.id==='maintenance.aircon'));ok(c.searchExpenseCategories('에').some(x=>x.id==='maintenance.aircon'));ok(c.searchExpenseCategories('003').some(x=>x.id==='office_print.printer_ink'));ok(c.searchExpenseCategories('Converge').some(x=>x.id==='communications.internet'));
  eq(v.moneyToMinor('1,234.56','PHP'),123456);eq(v.reportingPhpMinor('2300','KRW',23),10000);bad(()=>v.moneyToMinor('1,2','PHP'));bad(()=>v.moneyToMinor('-1','PHP'));bad(()=>v.moneyToMinor('1e3','PHP'));bad(()=>v.moneyToMinor('0.5','KRW'));
  const input={idempotency_key:crypto.randomUUID(),entry_date:'2026-11-01',applicable_period:'',unit:'academy',kind:'operating_expense',direction:'out',category_id:'office_print.printer_ink',merchant:'Synthetic test',memo:'Fixture ink purchase',amount:'100',currency:'PHP',house_scope:'none',house_ids:[],house_note:'',allocations:[],receipt_note:'Synthetic cash-only receipt reason',review_flags:[]};

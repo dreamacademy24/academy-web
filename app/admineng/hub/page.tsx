@@ -36,7 +36,12 @@ export default function EngHubPage() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const account = data?.staff;
-        if(!cancelled&&account?.role==='local_teacher'&&account.username===staff.username&&['admin-abby','admin-bella'].includes(account.username))setExpenseAccount(account.username);
+        if(!cancelled&&account?.username===staff.username){
+          void fetch("/api/expenses/access",{credentials:"same-origin",cache:"no-store"})
+            .then(response=>response.ok?response.json():null)
+            .then(access=>{if(!cancelled&&access?.canSubmit===true&&access.username===staff.username)setExpenseAccount(access.username);})
+            .catch(()=>{});
+        }
           if (!cancelled && account?.role === "local_teacher" && account.username === staff.username && ["admin-abby", "admin-axl"].includes(account.username)) setCertificateAccount(account.username);
         if (!cancelled && account?.role === "local_teacher" && account.username === staff.username && ["admin-abby", "admin-bella"].includes(account.username)) setHrAccount(account.username);
       }).catch(() => {});
@@ -241,8 +246,13 @@ export default function EngHubPage() {
       </div>
 
       {pwOpen && <StaffPasswordModal force={pwForce} onClose={() => { setPwOpen(false); setPwForce(false); }} />}
-      <div className="hub-grid">
-        {cards.map((c, i) => (
+      <nav className="hub-grid" aria-label="Staff menu">
+        {cards.map((c, i) => c.href === "/admineng/expenses" ? (
+          <a key="expenses" className="hub-card" href={c.href} aria-label="Expenses" style={{position:"relative",textDecoration:"none"}}>
+            <div className="ic">{c.icon}</div>
+            <div className="tx"><h2>{c.title}</h2><p>{c.desc}</p></div>
+          </a>
+        ) : (
           <div key={i} className="hub-card" style={{ position: "relative" }} onClick={() => router.push(c.href)}>
             {c.href === "/admineng/student-calendar" && scNew && (
               <span title="New update (new student / schedule change)" style={{ position: "absolute", top: 10, right: 12, width: 10, height: 10, borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 0 3px #fee2e2" }} />
@@ -254,7 +264,7 @@ export default function EngHubPage() {
             </div>
           </div>
         ))}
-      </div>
+      </nav>
 
       <div className="hub-foot">
         <a className="hub-link" href="/guide">Staff Guide</a>

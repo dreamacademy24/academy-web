@@ -6,8 +6,9 @@ import { supabase } from "@/lib/supabase";
 import { getAdminUserId } from "@/lib/adminAuth";
 import StaffSessionBoundary from "@/components/StaffSessionBoundary";
 import StaffAppManifest from "@/components/StaffAppManifest";
+import {maySeeExpenseMenu,type ExpenseMenuAccess,type ExpenseMenuScope} from "@/lib/expenses/menu";
 
-type Item = { label: string; href: string; ext?: boolean; badge?: number };
+type Item = { label: string; href: string; ext?: boolean; badge?: number; expenseScope?: ExpenseMenuScope };
 const NAV: { title: string; items: Item[] }[] = [
   { title: "직원업무", items: [
     { label: "직원업무 홈", href: "/staff?page=home", ext: true },
@@ -59,6 +60,7 @@ const NAV: { title: string; items: Item[] }[] = [
   ]},
   { title: "현지직원", items: [
     { label: "Local Staff Hub", href: "/admineng/hub", ext: true },
+    { label: "Expenses", href: "/admineng/expenses", expenseScope: "submit" },
     { label: "Shuttle Schedule", href: "/ashuttle", ext: true },
   ]},
   { title: "기타 업무", items: [
@@ -79,6 +81,7 @@ const NAV: { title: string; items: Item[] }[] = [
 const CEO_USERS = ["admin-ceo", "admin-may"];
 const CEO_NAV: { title: string; items: Item[] }[] = [
   { title: "CEO 전용", items: [
+    { label: "Expenses", href: "/admin/may/expenses", expenseScope: "review" },
     { label: "손익장부", href: "/admin/may/ledger" },
     { label: "HR 인사·급여", href: "/admin/HR" },
   ]},
@@ -101,6 +104,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [onlineAlerts, setOnlineAlerts] = useState(0);
   const [roomAlerts, setRoomAlerts] = useState(0);
   const [isCeo, setIsCeo] = useState(false);
+  const [expenseMenu,setExpenseMenu]=useState<ExpenseMenuAccess>({canSubmit:false,canReview:false});
+
+  useEffect(() => {
+    let live=true,request=0;
+    const refresh=async()=>{
+      const current=++request;
+      setExpenseMenu({canSubmit:false,canReview:false});
+      try{
+        const response=await fetch("/api/expenses/access",{credentials:"same-origin",cache:"no-store"});
+        const data=response.ok?await response.json():null;
+        if(live&&current===request)setExpenseMenu({canSubmit:data?.canSubmit===true,canReview:data?.canReview===true});
+      }catch{}
+    };
+    void refresh();
+    window.addEventListener("focus",refresh);window.addEventListener("storage",refresh);
+    return()=>{live=false;window.removeEventListener("focus",refresh);window.removeEventListener("storage",refresh);};
+  },[pathname]);
 
   useEffect(() => {
     try { setFramed(window.self !== window.top); } catch { setFramed(true); }
@@ -110,7 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     try { setIsCeo(CEO_USERS.includes(getAdminUserId() || "")); } catch {}
   }, [pathname]);
 
-  const navGroups = isCeo ? [...NAV, ...CEO_NAV] : NAV;
+  const navGroups = (isCeo || expenseMenu.canReview ? [...NAV, ...CEO_NAV] : NAV).map(group=>({...group,items:group.items.filter(item=>maySeeExpenseMenu(item.expenseScope,expenseMenu))}));
 
   useEffect(() => {
     (async () => {
@@ -129,7 +149,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     navGroups.forEach(g => { init[g.title] = g.items.some(it => it.ext ? (pathname === "/admin/view" && viewSrc === it.href) : (pathname === it.href || pathname.startsWith(it.href + "/"))); });
     setOpen(init);
     if (typeof window !== "undefined" && window.innerWidth < 900) setHidden(true);
-  }, [pathname, viewSrc, isCeo]);
+  }, [pathname, viewSrc, isCeo, expenseMenu.canSubmit, expenseMenu.canReview]);
 
   useEffect(() => {
     let live=true,busy=false;
