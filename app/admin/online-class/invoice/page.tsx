@@ -92,7 +92,7 @@ function fmtDayLabel(d: Date): string {
 // 성수기 방학 — 매년 고정, 이 기간 수업 없음
 const BREAK_PERIODS = [
   { start: "07-15", end: "08-30", label: "☀️ 여름 성수기 (7/15 ~ 8/30) — 수업 없음" },
-  { start: "12-15", end: "02-28", label: "❄️ 겨울 성수기 (12/15 ~ 2/28) — 수업 없음" },
+  { start: "12-24", end: "02-28", label: "❄️ 겨울 성수기 (12/24 ~ 2/28) — 수업 없음" },
 ];
 function isBreakPeriod(dateStr: string): boolean {
   const md = dateStr.slice(5); // "2026-07-20" → "07-20"
@@ -120,7 +120,7 @@ type CalWeek = CalCell[];
 type CalSegment = { type: "weeks"; weeks: CalWeek[] } | { type: "break"; label: string };
 
 /** 연속 방학 주를 하나의 break 세그먼트로 합침 */
-function groupWeekSegments(weeks: CalWeek[]): CalSegment[] {
+function groupWeekSegments(weeks: CalWeek[], sessionMap: Record<string, Session>): CalSegment[] {
   const segments: CalSegment[] = [];
   let buf: CalWeek[] = [];
   let inBreak = false;
@@ -129,7 +129,7 @@ function groupWeekSegments(weeks: CalWeek[]): CalSegment[] {
     const wd = week.slice(1, 6); // MON~FRI
     const allBreak = wd.every(c => c.inRange && isBreakPeriod(c.dateStr));
     const anyIn = week.some(c => c.inRange);
-    if (allBreak && anyIn) {
+    if (allBreak && anyIn && !week.some(cell => sessionMap[cell.dateStr])) {
       if (!inBreak) {
         if (buf.length) { segments.push({ type: "weeks", weeks: buf }); buf = []; }
         inBreak = true;
@@ -151,7 +151,7 @@ function renderCalendar(
   enrollment: Enrollment,
   holidaySet: Set<string> = new Set()
 ) {
-  const segments = groupWeekSegments(weeks);
+  const segments = groupWeekSegments(weeks, sessionMap);
   return (
     <table className="cal-tbl">
       <thead>
@@ -180,7 +180,7 @@ function renderCalendar(
                 if (!cell.inRange) classes.push("out");
                 const dow = cell.date.getDay();
                 const isWeekend = dow === 0 || dow === 6;
-                const isBreak = cell.inRange && !isWeekend && isSummerBreak(cell.dateStr);
+                const isBreak = !s && cell.inRange && !isWeekend && isSummerBreak(cell.dateStr);
                 let timeLabel = "";
                 const isHoliday = cell.inRange && !isWeekend && !s && holidaySet.has(cell.dateStr);
                 if (isBreak) {
