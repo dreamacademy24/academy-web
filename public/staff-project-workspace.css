@@ -4,3 +4,16 @@
 #ptRoot.pw-split .pw-table-panel{min-height:600px}#ptRoot.pw-split .pw-detail-actions{flex-wrap:wrap}#ptRoot.pw-split .pw-detail-actions>div:first-child{flex-basis:100%;line-height:1.8}#ptRoot.pw-split .pt-body.pw-reading:empty:before{content:'아직 작성된 내용이 없습니다. 편집을 눌러 설명과 준비 항목을 적어주세요.';color:#8b95aa;font-size:14px}#ptRoot.pw-split .pw-detail-actions[hidden]{display:none!important}
 #ptRoot .pw-split-grid{grid-template-columns:minmax(0,var(--pw-left,55fr)) 20px minmax(0,var(--pw-right,45fr));column-gap:0}.pw-resizer{align-self:stretch;min-height:180px;cursor:col-resize;touch-action:none;position:relative;outline:none;display:flex;justify-content:center;padding-top:35px}.pw-resizer:before{content:'';position:absolute;top:0;bottom:0;width:2px;background:#ddd5ed;border-radius:4px}.pw-resizer>span{position:sticky;top:180px;align-self:flex-start;z-index:1;display:grid;place-items:center;width:20px;height:48px;border:1px solid #c7b8e7;border-radius:9px;background:#f5f0ff;color:#7851c6;font-size:16px;font-weight:700}.pw-resizer:hover:before,.pw-resizer:focus-visible:before{background:#845be0;width:4px}.pw-resizer:focus-visible>span{outline:3px solid #a58aea;outline-offset:2px}.pw-resizing{user-select:none;cursor:col-resize}.pw-resize-hint{font-size:12px;color:#79688e;line-height:1.7;margin:0 0 12px}@media(max-width:780px){#ptRoot .pw-split-grid{grid-template-columns:minmax(0,1fr);row-gap:18px}.pw-resizer,.pw-resize-hint{display:none}}
 
+
+@media screen and (min-width:781px){
+  #ptRoot.pw-split .pw-table-panel,
+  #ptRoot.pw-split #ptDetail{
+    position:sticky;top:90px;box-sizing:border-box;
+    min-height:0;max-height:calc(100dvh - 108px);overflow:auto;
+  }
+  #ptRoot.pw-split .pw-table-panel{display:flex;flex-direction:column}
+  #ptRoot.pw-split .pw-table-scroll{min-height:0;overflow:auto}
+}
+@media screen and (max-width:780px){
+  #ptRoot.pw-split #ptDetail{scroll-margin-top:90px}
+}
