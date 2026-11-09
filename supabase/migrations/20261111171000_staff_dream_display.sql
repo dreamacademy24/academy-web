@@ -1,0 +1,1 @@
+do $$ declare f text; begin select pg_get_functiondef('public.sync_dreamy_checkin_flights()'::regprocedure) into f; execute replace(f,'드림이가 입실일과 항공 일정 확인을 요청했어요.','dream이 입실일과 항공 일정 확인을 요청했어요.'); end $$;

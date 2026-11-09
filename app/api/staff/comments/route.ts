@@ -48,6 +48,6 @@ export async function POST(req:Request){try{
  async function respond(comment:NonNullable<typeof prior.data>){
    if(!ctx.mentions.includes('system')&&ctx.parent?.from_id!=='system')return NextResponse.json({comment});
    try{return NextResponse.json({comment,reply:await answerDreamMention(db,comment)});}
-   catch{return NextResponse.json({error:'질문은 저장했습니다. 드림이 답변을 받으려면 같은 내용으로 등록을 다시 눌러주세요.'},{status:503});}
+   catch{return NextResponse.json({error:'질문은 저장했습니다. dream 답변을 받으려면 같은 내용으로 등록을 다시 눌러주세요.'},{status:503});}
  }
  }catch(e){return NextResponse.json({error:(e as Error).message||'댓글 저장에 실패했습니다.'},{status:(e as any).status||400});}}
