@@ -63,12 +63,16 @@ function orderedRows(rows, project){
   var ranks=new Map((project.work_order||[]).map(function(id,index){return [id,index];}));
   return rows.slice().sort(function(a,b){return (ranks.get(a.id)??Infinity)-(ranks.get(b.id)??Infinity);});
 }
-async function moveWork(id,neighbor){
+async function moveWork(id,neighbor,edge){
   if(orderBusy||!neighbor)return;
   var project=ptFindNode(PT.cur), revision=project.work_order_revision||0;
   var all=orderedRows(PT.nodes.filter(function(n){return n.project_id===project.id&&n.kind!=='project';}),project).map(function(n){return n.id;});
   var a=all.indexOf(id),b=all.indexOf(neighbor);if(a<0||b<0)return;
-  all[a]=neighbor;all[b]=id;orderBusy=true;
+    if(edge){
+    all.splice(a,1);
+    all.splice(all.indexOf(neighbor)+(edge==='after'?1:0),0,id);
+  }else{all[a]=neighbor;all[b]=id;}
+  orderBusy=true;
   try{
     var saved=await sbPatch('project_nodes','id=eq.'+encodeURIComponent(project.id)+'&work_order_revision=eq.'+revision,{work_order:all,work_order_revision:revision+1});
     if(!saved.length){
@@ -79,6 +83,46 @@ async function moveWork(id,neighbor){
     project.work_order=all;project.work_order_revision=revision+1;
   }catch(e){alert('순서를 저장하지 못했어요. '+e.message);}
   finally{orderBusy=false;if(PT.cur===project.id){renderRows();var row=Array.from(root().querySelectorAll('#pwRows tr')).find(function(tr){return tr.dataset.nodeId===id;});if(row)row.scrollIntoView({block:'nearest'});}}
+}
+function dragHandle(row){
+  var grip=button('⠿ 이동',function(e){e.stopPropagation();});
+  grip.title='끌어서 순서 변경';grip.setAttribute('aria-label','끌어서 순서 변경');
+  grip.style.cssText='touch-action:none;cursor:grab;min-height:36px;user-select:none';
+  grip.onpointerdown=function(e){
+    if(orderBusy||!e.isPrimary||e.button!==0)return;
+    var pointer=e.pointerId, list=row.closest('.pw-table-scroll'), target=null,edge='',frame=0,x=e.clientX,y=e.clientY;
+    var originY=y,active=false;
+    grip.setPointerCapture(pointer);
+    function clear(){if(target)target.style.boxShadow='';target=null;}
+    function locate(){
+      clear();var hit=document.elementFromPoint(x,y),r=hit&&hit.closest('#pwRows tr[data-node-id]');
+      if(!r||r===row||r.parentNode!==row.parentNode)return;
+      target=r;var box=r.getBoundingClientRect();edge=y<box.top+box.height/2?'before':'after';
+      r.style.boxShadow=edge==='before'?'inset 0 3px #7150dc':'inset 0 -3px #7150dc';
+    }
+    function scroll(){
+      if(!grip.isConnected){finish(false);return;}
+      var box=list.getBoundingClientRect();
+      if(x>=box.left&&x<=box.right&&y>=box.top-12&&y<=box.bottom+12){
+        if(y<box.top+35)list.scrollTop-=9;else if(y>box.bottom-35)list.scrollTop+=9;
+      }
+      locate();frame=requestAnimationFrame(scroll);
+    }
+    function finish(save){
+      cancelAnimationFrame(frame);if(save&&active)locate();
+      var dest=target&&target.dataset.nodeId;clear();row.style.opacity='';grip.style.cursor='grab';
+      grip.onpointermove=grip.onpointerup=grip.onpointercancel=grip.onlostpointercapture=null;
+      if(grip.hasPointerCapture(pointer))grip.releasePointerCapture(pointer);
+      if(save&&active&&dest)void moveWork(row.dataset.nodeId,dest,edge);
+    }
+    grip.onpointermove=function(ev){if(ev.pointerId!==pointer)return;x=ev.clientX;y=ev.clientY;
+      if(!active&&Math.abs(y-originY)>=4){active=true;row.style.opacity='.55';grip.style.cursor='grabbing';scroll();}
+      if(active)locate();
+    };
+    grip.onpointerup=function(ev){if(ev.pointerId===pointer){x=ev.clientX;y=ev.clientY;finish(true);}};
+    grip.onpointercancel=grip.onlostpointercapture=function(){finish(false);};
+  };
+  return grip;
 }
 function renderRows(){var host=document.getElementById('pwRows');if(!host)return;var rows=pool(),u=typeof _ptUnreadSet==='function'?_ptUnreadSet():{};rows=rows.filter(function(n){return (!nav.query||(n.title+' '+plain(n.body)).toLowerCase().includes(nav.query.toLowerCase()))&&(!nav.person||(n.assignees||[]).includes(nav.person));});if(nav.sort==='order')rows=orderedRows(rows,ptFindNode(PT.cur));else rows.sort(function(a,b){return String(nav.sort==='status'?state(a):a.due||'9999').localeCompare(String(nav.sort==='status'?state(b):b.due||'9999'))*nav.direction;});
 var completeView=nav.completed===true;
@@ -99,7 +143,7 @@ tabs.replaceChildren();
 });
 rows=rows.filter(function(n){return (state(n)==='done')===completeView;});
 root().querySelector('.pw-table-title').textContent=cleanTitle((ptFindNode(nav.scope||nav.top)||{}).title)||'전체 업무';root().querySelector('.pw-count').textContent=rows.length+'개 항목';
-host.replaceChildren();rows.forEach(function(n,index){var tr=document.createElement('tr');tr.dataset.nodeId=n.id;tr.className=n.id===PT.sel?'selected':'';var doc=new DOMParser().parseFromString(n.body||'','text/html'),checks=doc.querySelectorAll('input[type=checkbox]'),checked=doc.querySelectorAll('input[type=checkbox][checked]').length;tr.innerHTML='<td><button class="pw-row-title">'+(n.kind==='folder'?'📁 ':'')+esc(cleanTitle(n.title))+'</button><small>'+(n.kind==='folder'?'분류 내용':'할 일')+(checks.length?' · ☑ '+checked+'/'+checks.length:'')+(u[n.id]?' · <b class="pw-new">새 소식</b>':'')+'</small></td><td>'+people(n.assignees)+'</td><td>'+esc(n.due||'미정')+'</td><td>'+badge(n)+'</td>';tr.querySelector('button').onclick=function(){ptSelect(n.id);};tr.onclick=function(e){if(!e.target.closest('button'))ptSelect(n.id);};if(orderingProject===PT.cur&&nav.sort==='order'){var controls=document.createElement('div');[['↑','위로',-1],['↓','아래로',1]].forEach(function(item){var target=rows[index+item[2]],btn=button(item[0],function(){moveWork(n.id,target&&target.id);});btn.disabled=!target;btn.setAttribute('aria-label',cleanTitle(n.title)+' '+item[1]);btn.title=item[1];btn.style.minHeight='32px';controls.append(btn);});tr.cells[0].append(controls);}host.append(tr);});if(!rows.length)host.innerHTML='<tr><td colspan="4" class="pw-empty">'+(nav.query||nav.person?'검색 조건에 맞는 항목이 없습니다.':completeView?'완료된 항목이 없습니다.':'현재 남은 할 일이 없습니다.')+'</td></tr>';}
+host.replaceChildren();rows.forEach(function(n,index){var tr=document.createElement('tr');tr.dataset.nodeId=n.id;tr.className=n.id===PT.sel?'selected':'';var doc=new DOMParser().parseFromString(n.body||'','text/html'),checks=doc.querySelectorAll('input[type=checkbox]'),checked=doc.querySelectorAll('input[type=checkbox][checked]').length;tr.innerHTML='<td><button class="pw-row-title">'+(n.kind==='folder'?'📁 ':'')+esc(cleanTitle(n.title))+'</button><small>'+(n.kind==='folder'?'분류 내용':'할 일')+(checks.length?' · ☑ '+checked+'/'+checks.length:'')+(u[n.id]?' · <b class="pw-new">새 소식</b>':'')+'</small></td><td>'+people(n.assignees)+'</td><td>'+esc(n.due||'미정')+'</td><td>'+badge(n)+'</td>';tr.querySelector('button').onclick=function(){ptSelect(n.id);};tr.onclick=function(e){if(!e.target.closest('button'))ptSelect(n.id);};if(orderingProject===PT.cur&&nav.sort==='order'){var controls=document.createElement('div');controls.append(dragHandle(tr));[['↑','위로',-1],['↓','아래로',1]].forEach(function(item){var target=rows[index+item[2]],btn=button(item[0],function(){moveWork(n.id,target&&target.id);});btn.disabled=!target;btn.setAttribute('aria-label',cleanTitle(n.title)+' '+item[1]);btn.title=item[1];btn.style.minHeight='32px';controls.append(btn);});tr.cells[0].append(controls);}host.append(tr);});if(!rows.length)host.innerHTML='<tr><td colspan="4" class="pw-empty">'+(nav.query||nav.person?'검색 조건에 맞는 항목이 없습니다.':completeView?'완료된 항목이 없습니다.':'현재 남은 할 일이 없습니다.')+'</td></tr>';}
 ptRenderTree=function(id){if(root()&&root().classList.contains('pw-split')){renderTabs();renderRows();}else originalTree(id);};
 ptSelect=function(id){var n=ptFindNode(id);if(!n)return;PT.sel=id;ptMarkNodeRead(id);renderRows();ptRenderDetail(id);var detail=document.getElementById("ptDetail");if(detail){detail.scrollTop=0;if(window.matchMedia("(max-width:780px)").matches)detail.scrollIntoView({block:"start"});}};
 ptRenderDetail=function(id){originalDetail(id);var el=document.getElementById('ptDetail'),n=ptFindNode(id);if(!el||!n)return;el.classList.add('pw-detail');var actions=el.firstElementChild;actions.classList.add('pw-detail-actions');actions.hidden=true;var title=el.querySelector('#ptTitle');if(title){title.setAttribute('aria-label','항목 제목');title.readOnly=true;}var body=el.querySelector('#ptBody'),toolbar=el.querySelector('.pt-toolbar');if(body){body.contentEditable='false';body.classList.add('pw-reading');}if(toolbar)toolbar.hidden=true;
