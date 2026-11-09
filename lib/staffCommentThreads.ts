@@ -27,7 +27,7 @@ export async function notifyTaskComment(db:Db,author:string,comment:{id:string;t
  const recipients=[...new Set([...ctx.people,...ctx.mentions,...(ctx.parent?[ctx.parent.from_id]:[])])].filter(id=>id!==author&&ctx.active.has(id)&&(!ctx.task.secret||ctx.people.includes(id)));
  if(!recipients.length)return;
  const rows=recipients.map(to=>({id:`tc:${comment.id}:${to}`,to_id:to,type:'task_comment',ref_id:comment.task_id,
- message:`${ctx.active.get(author)||author}님이 ${ctx.mentions.includes(to)?'태그했습니다':ctx.parent?.from_id===to?'답글을 남겼습니다':'댓글을 남겼습니다'}: ${String(ctx.task.title||'업무').slice(0,45)} · ${comment.text.slice(0,80)}`,is_read:false}));
+ message:`${ctx.active.get(author)||author}님이 ${ctx.mentions.includes(to)?'태그했습니다':ctx.parent?.from_id===to?'답글을 남겼습니다':'댓글을 남겼습니다'}: ${String(ctx.task.title||'업무').slice(0,45)} · ${comment.text}`,is_read:false}));
  // Retrying after a dropped response must not create another notification or reset its read state.
  const r=await db.from('staff_notifications').upsert(rows,{onConflict:'id',ignoreDuplicates:true});
  if(r.error)throw Error('댓글은 저장되었지만 알림 전달을 완료하지 못했습니다. 다시 등록을 눌러 알림 전달을 재시도해주세요.');
