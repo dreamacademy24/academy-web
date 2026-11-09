@@ -149,7 +149,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     navGroups.forEach(g => { init[g.title] = g.items.some(it => it.ext ? (pathname === "/admin/view" && viewSrc === it.href) : (pathname === it.href || pathname.startsWith(it.href + "/"))); });
     setOpen(init);
     if (typeof window !== "undefined" && window.innerWidth < 900) setHidden(true);
-  }, [pathname, viewSrc, isCeo, expenseMenu.canSubmit, expenseMenu.canReview]);
+  }, [pathname, viewSrc, isCeo]);
+
+  useEffect(() => {
+    if(expenseMenu.canReview && (pathname === "/admin/may/expenses" || pathname.startsWith("/admin/may/expenses/"))) {
+      setOpen(previous=>({...previous,"CEO 전용":true}));
+    }
+  },[pathname,expenseMenu.canReview]);
 
   useEffect(() => {
     let live=true,busy=false;
