@@ -60,6 +60,18 @@ export default function OnlineClassStudentPage() {
   const [dayTimes, setDayTimes] = useState<Record<string, string>>({});
   // 시간 선택
   const [tp, setTp] = useState<{ label: string; cb: (t: string) => void } | null>(null);
+  const [move,setMove]=useState<{session:Ses;date:string;time:string;originalTime:string}|null>(null);
+  const [moveBusy,setMoveBusy]=useState(false);
+  async function submitMove(){
+    if(!move||moveBusy)return;
+    setMoveBusy(true);
+    try{
+      const res=await fetch('/api/online-class/change-requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:move.session.id,req_date:move.date,req_time_kr:move.time})});
+      const data=await res.json();
+      if(!res.ok)throw Error(data.error||'변경 요청 실패');
+      setMove(null);show('변경 요청을 접수했어요. 변경요청 목록에서 확인할 수 있어요.');
+    }catch(e){show(e instanceof Error?e.message:'변경 요청 실패',false);}finally{setMoveBusy(false);}
+  }
   const [pick, setPick] = useState<Ses | null>(null);
   const [mentOpen, setMentOpen] = useState(false);
   const [comments, setComments] = useState<{ id: string; by: string; at: string; text: string }[]>([]);
@@ -445,7 +457,7 @@ export default function OnlineClassStudentPage() {
                     return (
                       <div key={s.id} onClick={() => setPick(s)} title={`#${s.session_number} ${s.scheduled_date} ${s.scheduled_time_kr || ""} · ${s.status} — 클릭해서 출석/보강/취소 선택`}
                         style={{ position: "relative", width: 64, borderRadius: 9, padding: "8px 4px 7px", textAlign: "center", background: st.bg, color: st.color, border: "1px solid rgba(0,0,0,0.05)", cursor: "pointer" }}>
-                        <div style={{ fontSize: 11.5, fontWeight: 700 }}>{d}</div>
+                        {s.status==="scheduled" ? <button type="button" title="이 회차의 날짜·시간 변경 요청" aria-label={s.scheduled_date+" 수업 일정 변경 요청"} style={{fontSize:12,fontWeight:700,color:"#3657a6",background:"transparent",border:0,textDecoration:"underline",cursor:"pointer",padding:"4px 2px"}} onClick={e=>{e.stopPropagation();const time=(s.scheduled_time_kr||enr?.class_time_kr||"").slice(0,5);setMove({session:s,date:s.scheduled_date,time,originalTime:time});}}>{d}</button> : <div style={{fontSize:11.5,fontWeight:700}}>{d}</div>}
                         <div style={{ fontSize: 14, fontWeight: 800 }}>{st.label}</div>
                         {s.session_note && <span style={{ position: "absolute", top: 2, right: 3, fontSize: 10 }}>💬</span>}
                         {s.attitude === "issue" && <span style={{ position: "absolute", bottom: 2, right: 3, fontSize: 10 }}>⚠️</span>}
@@ -528,6 +540,15 @@ export default function OnlineClassStudentPage() {
       )}
 
       {/* 출석/보강/취소 상태 선택 모달 */}
+      {move && <div style={{position:"fixed",inset:0,background:"#0006",zIndex:9999,display:"grid",placeItems:"center"}}>
+        <form role="dialog" aria-modal="true" aria-label="수업 일정 변경 요청" onSubmit={e=>{e.preventDefault();void submitMove();}} style={{background:"white",padding:22,borderRadius:14,width:"min(360px,92vw)",display:"grid",gap:12}}>
+          <strong>{move.session.session_number}회차 일정 변경 요청</strong>
+          <div>기존 일정 · {move.session.scheduled_date} {move.originalTime} (한국 시간)</div>
+          <label>변경 날짜 <input required type="date" value={move.date} onChange={e=>setMove({...move,date:e.target.value})}/></label>
+          <label>변경 시간 (한국) <input required type="time" value={move.time} onChange={e=>setMove({...move,time:e.target.value})}/></label>
+          <div><button type="button" disabled={moveBusy} onClick={()=>setMove(null)}>닫기</button> <button disabled={moveBusy||(move.date===move.session.scheduled_date&&move.time===move.originalTime)}>{moveBusy?"접수 중…":"변경 요청"}</button></div>
+        </form>
+      </div>}
       {pick && (
         <div onClick={() => setPick(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 20, width: "min(360px,92vw)" }}>

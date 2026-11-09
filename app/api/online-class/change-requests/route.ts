@@ -220,3 +220,21 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'unknown' }, { status: 500 })
   }
 }
+
+export async function POST(req: Request) {
+  if (!await isPortalAdmin(req)) return NextResponse.json({error:'직원 로그인이 필요합니다.'},{status:401})
+  const body = await req.json().catch(()=>null)
+  const date = body?.req_date, time = body?.req_time_kr
+  if (!body?.session_id || !/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time || ''))
+    return NextResponse.json({error:'변경할 날짜와 한국 시간을 확인해주세요.'},{status:400})
+  const {data:s,error}=await supabase.from('online_sessions').select('enrollment_id,scheduled_date,scheduled_time_kr,status,tutor_id,enrollment:online_enrollments(customer_user_id,class_time_kr,tutor_id)').eq('id',body.session_id).maybeSingle()
+  if(error||!s||s.status!=='scheduled') return NextResponse.json({error:'예정된 회차만 변경 요청할 수 있어요.'},{status:409})
+  const enrollment=Array.isArray(s.enrollment)?s.enrollment[0]:s.enrollment
+  const originalTime=(s.scheduled_time_kr||enrollment?.class_time_kr||'').slice(0,5)
+  if(date===s.scheduled_date && time===originalTime) return NextResponse.json({error:'기존 일정과 같습니다.'},{status:400})
+  const {data:pending,error:lookupError}=await supabase.from('online_change_requests').select('id').eq('enrollment_id',s.enrollment_id).eq('status','pending').or('req_type.eq.full,session_id.eq.'+body.session_id).limit(1)
+  if(lookupError||pending?.length) return NextResponse.json({error:lookupError?'요청 상태를 확인하지 못했어요.':'이미 검토 중인 요청이 있어요. 변경요청 목록을 확인해 주세요.'},{status:409})
+  const {error:saveError}=await supabase.from('online_change_requests').insert({req_type:'single',session_id:body.session_id,enrollment_id:s.enrollment_id,customer_user_id:enrollment?.customer_user_id||null,tutor_id:s.tutor_id||enrollment?.tutor_id||null,original_date:s.scheduled_date,original_time_kr:originalTime||null,req_date:date,req_time_kr:time,effective_from:date,status:'pending',teacher_status:'pending',admin_status:'pending',memo:'직원 출석부에서 요청'})
+  if(saveError)return NextResponse.json({error:'변경 요청을 저장하지 못했어요.'},{status:409})
+  return NextResponse.json({ok:true})
+}
