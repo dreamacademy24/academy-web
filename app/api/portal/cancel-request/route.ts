@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { sendTelegram, escapeHtml } from "@/lib/telegram";
 import { requireApplication } from '@/lib/portalAuth';
+import { fieldtripClosed, legacyProgramDate, isFieldtripToken, FIELDTRIP_DEADLINE_MESSAGE } from '@/lib/fieldtripDeadline';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,6 +24,24 @@ export async function POST(req: Request) {
     if (denied) return denied;
 
     let update: Record<string, unknown> = { status: "cancel_requested" };
+    if (table === 'fieldtrip_applications') {
+      const { data: application, error } = await supabase.from(table).select('date,created_at').eq('id', id).maybeSingle();
+      if (error) return NextResponse.json({ error: '신청 내역을 확인하지 못했습니다.' }, { status: 500 });
+      if (!application) return NextResponse.json({ error: '신청 내역이 없습니다.' }, { status: 404 });
+      const tokens = String(application.date || '').split(',').map(t => t.trim()).filter(Boolean);
+      if (token && !tokens.includes(String(token))) return NextResponse.json({ error: '신청한 프로그램이 아닙니다.' }, { status: 400 });
+      const targets = token ? [String(token)] : tokens;
+      if (!targets.length) return NextResponse.json({ error: '신청 날짜를 확인해 주세요.' }, { status: 400 });
+      for (const target of targets) {
+        const date = legacyProgramDate(target, application.created_at);
+        if (!date) return NextResponse.json({ error: '행사 날짜를 확인할 수 없습니다. 직원에게 문의해 주세요.' }, { status: 400 });
+        // Deployed type wins over the legacy program key.
+        const { data: schedule, error: scheduleError } = await supabase.from('schedule_items').select('type').eq('date', date).eq('is_deployed', true).in('type', ['fieldtrip','afterschool']);
+        if (scheduleError) return NextResponse.json({ error: '행사 일정을 확인하지 못했습니다.' }, { status: 500 });
+        const isFieldtrip = isFieldtripToken(target) || schedule?.some(s => s.type === 'fieldtrip');
+        if (isFieldtrip && fieldtripClosed(date)) return NextResponse.json({ error: FIELDTRIP_DEADLINE_MESSAGE }, { status: 403 });
+      }
+    }
     if (table === "fieldtrip_applications" && token) {
       // 날짜(프로그램) 단위 취소요청 — 전체 status는 건드리지 않음
       const { data: row0 } = await supabase.from(table).select("cancel_requested_dates").eq("id", id).maybeSingle();

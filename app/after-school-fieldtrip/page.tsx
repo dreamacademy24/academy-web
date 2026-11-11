@@ -537,7 +537,7 @@ export default function AfterSchoolFieldtripPage() {
               </ul>
               <h3>🚌 토요일 필드트립</h3>
               <ul>
-                <li style={{ color: "#dc2626" }}><strong>필드트립은 7일 전까지 신청 가능합니다.</strong></li>
+                <li style={{ color: "#dc2626" }}><strong>필드트립 신청 및 취소는 행사 7일 전까지만 가능합니다.</strong></li>
                 <li>픽업: 10:15~20 / 드롭: 4:20~25 (집 앞으로 픽드랍)</li>
                 <li>전날 픽업 안내 발송됩니다.</li>
               </ul>
@@ -743,7 +743,7 @@ export default function AfterSchoolFieldtripPage() {
                   <li><strong>월~금 오후 4시 50분까지</strong> 신청 가능합니다.</li>
                   <li><strong>토·일 및 당일 신청은 불가</strong>합니다.</li>
                   <li><strong>애프터스쿨 프로그램은 시작일 기준 4일 전 마감됩니다.</strong> 재료 및 차량 준비를 위해 마감 이후 추가 신청은 불가합니다. 마감일이 주말이면 직전 금요일 오후 4시 50분까지 신청해주세요.</li>
-                  <li style={{ color: "#dc2626" }}><strong>🚌 필드트립은 7일 전까지 신청 가능합니다.</strong></li>
+                  <li style={{ color: "#dc2626" }}><strong>🚌 필드트립 신청 및 취소는 행사 7일 전까지만 가능합니다.</strong></li>
                 </ul>
               </div>
 
