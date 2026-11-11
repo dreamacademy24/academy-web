@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { toastErr } from "@/lib/toast";
-import { fieldtripClosed, legacyProgramDate, isFieldtripToken, FIELDTRIP_DEADLINE_MESSAGE } from "@/lib/fieldtripDeadline";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -80,7 +79,7 @@ export default function MyApplicationsPage() {
     try {
       for (const rid of rowIds) {
         const response = await portalFetch("/api/portal/cancel-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "fieldtrip_applications", id: rid, token }) });
-        if (!response.ok) { const result = await response.json(); throw new Error(result.error || "취소 요청에 실패했습니다. 신청 내역을 다시 확인해주세요."); }
+        if (!response.ok) throw new Error("취소 요청에 실패했습니다. 신청 내역을 다시 확인해주세요.");
       }
       // 로컬 반영
       setData(prev => ({ ...prev, fieldtrip: prev.fieldtrip.map((r: AnyRow) => rowIds.includes(String(r.id))
@@ -489,8 +488,6 @@ export default function MyApplicationsPage() {
                       const reqRows = active.filter(x => isReq(x, tok));
                       const cancellable = active.filter(x => !isReq(x, tok));
                       const allCx = active.length === 0;
-                      const eventDate = legacyProgramDate(tok, String(r.created_at || ""));
-                      const closed = isFieldtripToken(tok) && (!eventDate || fieldtripClosed(eventDate));
                       const sheetOpen = cxSheet && cxSheet.gkey === gkey && cxSheet.token === tok;
                       return (
                         <div key={i}>
@@ -501,11 +498,10 @@ export default function MyApplicationsPage() {
                             {reqRows.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: "#92400e", background: "#fef3c7", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>{grp.length > 1 ? reqRows.map(x => String(x.name || "").trim()).join("·") + " " : ""}취소 접수</span>}
                             {grp.length > 1 && !allCx && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#0d9488", background: "#f0fdfa", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>👧 {active.length}명</span>}
                             {cancellable.length > 0 && (
-                              <button disabled={closed} title={closed ? FIELDTRIP_DEADLINE_MESSAGE : "취소 요청"} onClick={() => setCxSheet(sheetOpen ? null : { gkey, token: tok })} style={{ width: 26, height: 26, borderRadius: 8, border: "1px solid #fecaca", background: "#fff5f5", color: "#dc2626", fontSize: 13, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>✕</button>
+                              <button onClick={() => setCxSheet(sheetOpen ? null : { gkey, token: tok })} style={{ width: 26, height: 26, borderRadius: 8, border: "1px solid #fecaca", background: "#fff5f5", color: "#dc2626", fontSize: 13, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>✕</button>
                             )}
                           </div>
-                          {!allCx && closed && <div className="ma-meta">취소 마감 · 직원에게 문의해 주세요.</div>}
-                          {sheetOpen && !closed && (
+                          {sheetOpen && (
                             <div style={{ border: "1.5px dashed #93c5fd", background: "#f0f7ff", borderRadius: 10, padding: "11px 13px", margin: "6px 0 2px" }}>
                               <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8 }}>{pg.label} {pg.name} — {cancellable.length > 1 ? "누구를 취소할까요?" : "취소할까요?"}</div>
                               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
