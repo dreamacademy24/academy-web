@@ -209,6 +209,7 @@ function _staffTaskCheckPatch(t,index){
   return _staffCompletionPeople(t).length>1?{checklist:checklist}:{checklist:checklist,progress:progress,done:progress===100};
 }
 function _staffOwnComment(c){return !!(CU&&c&&c.id!=null&&c.id!==''&&String(c.author)===String(CU.id));}
+function _staffCanManageComment(c){return !!(CU&&c&&c.id!=null&&c.id!==''&&(CU.id==='ceo'||_staffOwnComment(c)));}
 function _staffCommentText(text){
   var source=String(text||''),out='',at=0,re=/https?:\/\/[^\s<>"']+/gi,m;
   while((m=re.exec(source))){
@@ -221,13 +222,13 @@ function _staffCommentText(text){
 }
 function _staffCommentHtml(c,index){
   var person=getP(c.author);
-  return '<div class="swt-comment" data-comment-id="'+_staffSafe(String(c.id))+'" data-comment-index="'+index+'"><div class="swt-comment-head"><div><b>'+_staffSafe(person?person.name:c.author||'직원')+'</b><small>'+_staffSafe(c.date||'')+'</small></div>'+(_staffOwnComment(c)?'<div class="swt-comment-actions"><button type="button" data-act="comment-edit">수정</button><button type="button" data-act="comment-delete">삭제</button></div>':'')+'</div><p>'+_staffCommentText(c.text||'')+'</p><div class="swt-mention-tags">'+_staffCommentTags(c)+'</div><button type="button" class="swt-reply-button" data-reply-comment="'+_staffSafe(String(c.id))+'">답글</button><div class="swt-comment-photos">'+(typeof _staffAttachmentHtml==='function'?_staffAttachmentHtml(c.files||[]):'')+'</div><div class="swt-comment-controls"></div></div>';
+  return '<div class="swt-comment" data-comment-id="'+_staffSafe(String(c.id))+'" data-comment-index="'+index+'"><div class="swt-comment-head"><div><b>'+_staffSafe(person?person.name:c.author||'직원')+'</b><small>'+_staffSafe(c.date||'')+'</small></div>'+(_staffCanManageComment(c)?'<div class="swt-comment-actions"><button type="button" data-act="comment-edit">수정</button><button type="button" data-act="comment-delete">삭제</button></div>':'')+'</div><p>'+_staffCommentText(c.text||'')+'</p><div class="swt-mention-tags">'+_staffCommentTags(c)+'</div><button type="button" class="swt-reply-button" data-reply-comment="'+_staffSafe(String(c.id))+'">답글</button><div class="swt-comment-photos">'+(typeof _staffAttachmentHtml==='function'?_staffAttachmentHtml(c.files||[]):'')+'</div><div class="swt-comment-controls"></div></div>';
 }
 async function _staffMutateComment(taskId,c,text,deleting,files){
-  if(!_staffOwnComment(c))throw new Error('본인이 작성한 댓글만 수정·삭제할 수 있습니다.');
+  if(!_staffCanManageComment(c))throw new Error('댓글 수정·삭제 권한이 없습니다.');
   var author=CU.id;
   if(!deleting&&!text.trim()&&!(files||c.files||[]).length)throw new Error('댓글 내용 또는 사진을 입력해주세요.');
-  var response=await fetch('/api/staff/comments',{method:deleting?'DELETE':'PATCH',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:String(c.id),taskId:String(taskId),originalText:c.text||'',originalFiles:c.files||[],text:text,files:files===undefined?c.files||[]:files})});
+  var response=await fetch('/api/staff/comments',{method:deleting?'DELETE':'PATCH',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:String(c.id),taskId:String(taskId),originalText:c.text||'',originalFiles:c.files||[],text:text,files:_staffOwnComment(c)?(files===undefined?c.files||[]:files):undefined})});
   var data=await response.json();
   if(!response.ok){var failure=new Error(data.error||'댓글 저장에 실패했습니다.');failure.status=response.status;throw failure;}
   if(!data.comment||String(data.comment.id)!==String(c.id)||String(data.comment.task_id)!==String(taskId)||data.deleted!==deleting)throw new Error('저장 결과를 확인하지 못했습니다.');
@@ -304,7 +305,7 @@ function _renderStaffTaskDetail(taskId,hostId){
     if(_staffTaskWrites[t.id])return;
     if(act.indexOf('comment-')===0){
       var card=button.closest('[data-comment-index]'),index=card?Number(card.dataset.commentIndex):-1,c=comments[index];
-      if(!card||!_staffOwnComment(c))return;
+      if(!card||!_staffCanManageComment(c))return;
       var controls=card.querySelector('.swt-comment-controls'),paragraph=card.querySelector('p');
       if(act==='comment-cancel'){if(card._photoDraft&&card._photoDraft.busy)return;controls.innerHTML='';paragraph.hidden=false;card.querySelector('.swt-comment-photos').hidden=false;card.removeAttribute('data-comment-editing');card.querySelector('.swt-comment-actions').hidden=false;return;}
       if(act==='comment-edit'||act==='comment-delete'){
@@ -313,7 +314,7 @@ function _renderStaffTaskDetail(taskId,hostId){
         if(act==='comment-edit'){
           paragraph.hidden=true;controls.innerHTML='<label>댓글 수정<textarea class="swt-comment-editor" aria-label="댓글 수정"></textarea></label><div class="swt-comment-actions"><button type="button" data-act="comment-save">저장</button><button type="button" data-act="comment-cancel">취소</button></div><div role="status"></div>';
           controls.querySelector('textarea').value=c.text||'';controls.querySelector('textarea').focus();
-          card.querySelector('.swt-comment-photos').hidden=true;card._photoDraft={files:(c.files||[]).slice(),busy:false};var editPhotos=document.createElement('div');controls.querySelector('label').after(editPhotos);_staffCommentPhotoPicker(editPhotos,t.id,card._photoDraft);
+          if(_staffOwnComment(c)){card.querySelector('.swt-comment-photos').hidden=true;card._photoDraft={files:(c.files||[]).slice(),busy:false};var editPhotos=document.createElement('div');controls.querySelector('label').after(editPhotos);_staffCommentPhotoPicker(editPhotos,t.id,card._photoDraft);}
         }else controls.innerHTML='<p>이 댓글을 삭제할까요? 삭제하면 되돌릴 수 없습니다.</p><div class="swt-comment-actions"><button type="button" class="swt-comment-danger" data-act="comment-remove">삭제 확인</button><button type="button" data-act="comment-cancel">취소</button></div><div role="status"></div>';
         return;
       }

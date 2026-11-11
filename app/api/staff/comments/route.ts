@@ -13,7 +13,7 @@ async function mutate(req: Request, deleting: boolean) {
   if (!author || author === 'jun') return NextResponse.json({ error: '사용 권한이 없습니다.' }, { status: 403 });
   let body;
   try { body = await req.json(); } catch { return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 }); }
-  if (!body || typeof body.id !== 'string' || !body.id || body.id.length > 200 || typeof body.taskId !== 'string' || !body.taskId || body.taskId.length > 200 || typeof body.originalText !== 'string' || (!deleting && (typeof body.text !== 'string' || (!body.text.trim()&&!body.files?.length)))) {
+  if (!body || typeof body.id !== 'string' || !body.id || body.id.length > 200 || typeof body.taskId !== 'string' || !body.taskId || body.taskId.length > 200 || typeof body.originalText !== 'string' || (!deleting && (typeof body.text !== 'string' || body.text.length > 20000 || (!body.text.trim()&&!body.files?.length)))) {
     return NextResponse.json({ error: '댓글과 내용을 확인해주세요.' }, { status: 400 });
   }
   const db = portalDb();
@@ -27,9 +27,11 @@ async function mutate(req: Request, deleting: boolean) {
   let photos;try{if(!deleting&&body.files!==undefined)photos=validateCommentPhotos(body.files,author,body.taskId);}catch(e){return NextResponse.json({error:(e as Error).message},{status:400});}
   const query = deleting ? db.from('staff_task_comments').delete() : db.from('staff_task_comments').update({ text: body.text.trim(),...(photos?{files:photos}:{}) });
   if(body.originalFiles!==undefined)query.eq('files',JSON.stringify(body.originalFiles));
-  const { data, error } = await query.eq('id', body.id).eq('task_id', body.taskId).eq('from_id', author).eq('text', body.originalText).select('id,task_id,from_id,text,ts,files,parent_id,mention_ids');
+  // CEO moderation keeps the original author and never changes task/read states.
+  if(author !== 'ceo')query.eq('from_id', author);
+  const { data, error } = await query.eq('id', body.id).eq('task_id', body.taskId).eq('text', body.originalText).select('id,task_id,from_id,text,ts,files,parent_id,mention_ids');
   if (error) return NextResponse.json({ error: '댓글 저장에 실패했습니다. 잠시 후 다시 시도해주세요.' }, { status: 503 });
-  if (!data || data.length !== 1) return NextResponse.json({ error: '댓글이 변경·삭제되었거나 본인 댓글이 아닙니다. 최신 내용을 확인해주세요.' }, { status: 409 });
+  if (!data || data.length !== 1) return NextResponse.json({ error: '댓글이 변경·삭제되었거나 수정 권한이 없습니다. 최신 내용을 확인해주세요.' }, { status: 409 });
   return NextResponse.json({ comment: data[0], deleted: deleting });
 }
 
