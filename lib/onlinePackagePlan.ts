@@ -17,10 +17,10 @@ export function packageBookings(rows:any[],name?:string):PackageBooking[]{
       const from=student.academyStart||student.academy_start,to=student.academyEnd||student.academy_end;
       const hasStudy=validDate(from||'')&&validDate(to||'')&&to>=from;
       const explicit=Number(student.academy_weeks||student.academyWeeks||student.study_weeks);
-      const weeks=explicit>0?explicit:hasStudy?Math.ceil((Date.parse(to)-Date.parse(from)+86400000)/(7*86400000)):Number(b.dh_weeks||b.accom_weeks)||Math.ceil((Date.parse(b.checkout_date)-Date.parse(b.checkin_date))/(7*86400000));
+      const weeks=hasStudy?Math.ceil((Date.parse(to)-Date.parse(from)+86400000)/(7*86400000)):explicit>0?explicit:Number(b.dh_weeks||b.accom_weeks)||Math.ceil((Date.parse(b.checkout_date)-Date.parse(b.checkin_date))/(7*86400000));
       if(!Number.isSafeInteger(weeks)||weeks<1||weeks>104)continue;
       if(result.some(r=>r.id===b.id&&studentKey(r.student)===studentKey(kor)))continue;
-      result.push({id:b.id,number:b.reservation_no||b.id,from:b.checkin_date,to:b.checkout_date,weeks,basis:explicit>0?'학생 등록 주수':hasStudy?'학생 연수 일정':'예약 등록 주수',student:kor,english:student.engName||student.name_en||''});
+      result.push({id:b.id,number:b.reservation_no||b.id,from:b.checkin_date,to:b.checkout_date,weeks,basis:hasStudy?'학생 연수 일정':explicit>0?'학생 등록 주수':'예약 등록 주수',student:kor,english:student.engName||student.name_en||''});
     }
   }return result.sort((a,b)=>a.from.localeCompare(b.from));
 }

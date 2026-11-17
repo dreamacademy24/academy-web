@@ -4,6 +4,7 @@ function load(file){const filename=path.join(root,file),module={exports:{}};cons
 const r=load('lib/onlinePackagePlan.ts'),today='2026-09-14';
 const booking=(id='b1',weeks=4,from='2026-11-01',to='2026-11-29')=>({id,number:id,weeks,from,to,student:'테스트',english:'Test',basis:'예약 등록 주수'});
 const bs=[booking()];const part=(count,start,days=['월','수','금'])=>({count,start,days,times:Object.fromEntries(days.map(d=>[d,'19:00']))});
+assert.equal(r.packageBookings([{id:'stale',status:'완료',checkin_date:'2026-10-24',checkout_date:'2026-11-21',accom_weeks:4,students:[{korName:'검증학생',academyWeeks:'2',academyStart:'2026-10-26',academyEnd:'2026-11-20'}]}])[0].weeks,4,'saved study dates must override stale two-week default');
 const plan=()=>({version:1,bookingIds:['b1'],total:12,manual:false,reason:'',pre:part(9,'2026-10-05'),post:part(3,'2026-11-30')});
 let passed=0;function test(name,fn){fn();console.log('PASS '+name);passed++;}
 const build=(p,s=[],used=0,b=bs)=>r.buildPackageSchedule(r.validatePackagePlan(p,b,true),b,s,new Set(),used,today);

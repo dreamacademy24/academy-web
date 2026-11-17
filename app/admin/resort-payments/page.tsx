@@ -56,7 +56,7 @@ export default function ResortPaymentsPage() {
   const [savingImg, setSavingImg] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    // Keep file inputs mounted when the native picker returns focus or polling runs.
     try { const data = await loadActiveResortInvoices(); setRows(data as InvRow[]); setViewInv(old=>old&&data.some(r=>r.id===old.id)?old:null); } catch(e) { setRows([]); setViewInv(null); alert((e as Error).message); }
     setLoading(false);
   }, []);
