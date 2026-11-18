@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { buildOnlineSessionDates, onlineStartWarning } from '@/lib/onlineClassSchedule'
 import { planOnlineSessions, onlineSessionCountIssue } from '@/lib/onlineSessionRepair'
 import { isPortalAdmin, getStaffIdentity } from '@/lib/portalAuth'
+import { actualSessionConflict } from '@/lib/onlineActualConflict'
 
 function krToPh(kr: string | null): string | null {
   if (!kr || !/^\d{1,2}:\d{2}/.test(kr)) return null
@@ -19,6 +20,12 @@ export async function GET(req: Request) {
   if (!await getStaffIdentity(req)) return NextResponse.json({ error: '직원 로그인이 필요합니다.' }, { status: 401 })
   const { searchParams } = new URL(req.url)
   const tutorId = searchParams.get('tutor_id')
+  const checkId = searchParams.get('conflict_check_id')
+  if(checkId&&tutorId){
+    const {data: enrollment,error}=await supabase.from('online_enrollments').select('id,days_of_week,class_time_kr,day_times,start_date,end_date').eq('id',checkId).single();
+    if(error||!enrollment)return NextResponse.json({error:'수강권을 확인하지 못했습니다.'},{status:404});
+    try{return NextResponse.json({conflict:await findTutorConflict(tutorId,{...enrollment,useStoredSessions:true}),checked_actual_sessions:true},{headers:{'Cache-Control':'no-store'}});}catch{return NextResponse.json({error:'실제 수업 일정을 확인하지 못했습니다.'},{status:503});}
+  }
 
   let q = supabase
     .from('online_enrollments')
@@ -67,16 +74,26 @@ function _nt(t: string | null): string | null {
   const m = String(t).match(/(\d{1,2})[:시](\d{2})/)
   return m ? `${m[1].padStart(2, '0')}:${m[2]}` : String(t)
 }
-async function findTutorConflict(tutorId: string, enr: { id?: string; days_of_week?: string[]; class_time_kr?: string | null; day_times?: Record<string, string> | null; start_date?: string | null; end_date?: string | null }): Promise<string | null> {
+async function findTutorConflict(tutorId: string, enr: { id?: string; days_of_week?: string[]; class_time_kr?: string | null; day_times?: Record<string, string> | null; start_date?: string | null; end_date?: string | null; useStoredSessions?:boolean }): Promise<string | null> {
   if (!tutorId) return null
-  const { data: others } = await supabase.from('online_enrollments')
+  const { data: others, error: conflictReadError } = await supabase.from('online_enrollments')
     .select('id, student_name, days_of_week, class_time_kr, day_times, start_date, end_date, status')
     .eq('tutor_id', tutorId).in('status', ['active', 'scheduled'])
+  if(conflictReadError)throw Error('선생님의 기존 수업을 확인하지 못했습니다. 다시 시도해주세요.');
+  const ids=[...new Set([...(others||[]).map(o=>o.id),...(enr.id?[enr.id]:[])])];
+  const slots:any[]=[];
+  if(ids.length){for(let offset=0;;offset+=1000){const r=await supabase.from('online_sessions').select('enrollment_id,scheduled_date,scheduled_time_kr,status').in('enrollment_id',ids).order('id').range(offset,offset+999);if(r.error)throw Error('실제 수업 일정을 확인하지 못했습니다. 다시 시도해주세요.');slots.push(...(r.data||[]));if((r.data||[]).length<1000)break;}}
   const myDays = (enr.days_of_week || []).map(_nd)
   const myTimeOf = (d: string) => _nt((enr.day_times && (enr.day_times as any)[Object.keys(_DN).find(k => _nd(k) === d && k.length === 1) || ''] ) || enr.class_time_kr || null)
   const aS = enr.start_date || '0000', aE = enr.end_date || '9999'
   for (const o of (others || [])) {
     if (enr.id && o.id === enr.id) continue
+    // Saved attendance is authoritative for split pre/post periods and moved lessons.
+    if(slots.some(s=>s.enrollment_id===o.id)){
+      const overlap=actualSessionConflict(enr,o.id,slots);
+      if(overlap)return `${o.student_name} (${overlap})`;
+      continue;
+    }
     const bS = o.start_date || '0000', bE = o.end_date || '9999'
     if (aS > bE || bS > aE) continue // 기간 안 겹침
     const oDays = (o.days_of_week || []).map(_nd)
@@ -338,6 +355,7 @@ export async function PATCH(req: Request) {
       if (effTutor) {
         const eff = {
           id,
+          useStoredSessions:!regenerate_sessions&&!['days_of_week','class_time_kr','day_times','start_date','end_date','total_sessions'].some(k=>k in updates),
           days_of_week: ('days_of_week' in updates ? updates.days_of_week : cur?.days_of_week) as string[],
           class_time_kr: ('class_time_kr' in updates ? updates.class_time_kr : cur?.class_time_kr) as string | null,
           day_times: ('day_times' in updates ? updates.day_times : cur?.day_times) as Record<string, string> | null,

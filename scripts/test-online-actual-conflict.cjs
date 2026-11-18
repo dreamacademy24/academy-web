@@ -1,0 +1,12 @@
+const ts=require('typescript'),fs=require('fs'),vm=require('vm'),assert=require('assert/strict');const m={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/onlineActualConflict.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:m.exports,module:m,Date});const f=m.exports.actualSessionConflict;
+const candidate={id:'new',days_of_week:['월','수','금'],class_time_kr:'20:00',day_times:{월:'20:00',수:'20:00',금:'20:00'},start_date:'2026-11-18',end_date:'2026-12-16'};
+const s=(date,time,status='scheduled',id='old')=>({enrollment_id:id,scheduled_date:date,scheduled_time_kr:time,status});
+assert.equal(f(candidate,'old',[s('2026-09-21','20:00','attended'),s('2026-12-07','19:30','makeup'),s('2027-03-01','20:00')]),null);
+assert.equal(f(candidate,'old',[s('2026-11-23','20:00')]),'2026-11-23 20:00');
+assert.equal(f(candidate,'old',[s('2026-11-23','20:00','cancelled')]),null);
+assert.equal(f(candidate,'old',[s('2026-11-23','20:00','attended')]),null);
+assert.equal(f({...candidate,useStoredSessions:true},'old',[s('2026-11-23','20:00'),s('2026-11-25','20:00','scheduled','new')]),null);
+assert.equal(f({...candidate,useStoredSessions:true},'old',[s('2026-11-23','20:00'),s('2026-11-23','20:00','scheduled','new')]),'2026-11-23 20:00');
+assert.equal(f(candidate,'old',[s('2026-11-23','20:00:00','makeup')]),'2026-11-23 20:00');
+assert.equal(f({...candidate,day_times:{mon:'19:30'}},'old',[s('2026-11-23','19:30')]),'2026-11-23 19:30');
+console.log('8 actual-date tutor conflict regressions passed');
