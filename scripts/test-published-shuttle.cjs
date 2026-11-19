@@ -26,4 +26,13 @@ assert.equal(slots('2026-11-30', [], new Set()), 'holiday');
 assert.notEqual(slots('2026-11-27', [], new Set()), 'holiday');
 assert.ok(slots('2026-10-01', rows, new Set()).length, 'unpublished legacy months retain their existing schedule');
 assert.equal(slots('2026-09-26', [{...rows[0], title: '추가 장소', description: '출발 15:00 · 복귀 17:00'}], new Set())[0].return, '17:00');
-console.log('10 published shuttle regression checks passed');
+const { getShSlots, SHUTTLE_SPECIAL_MSG } = load('lib/shuttleTours.ts');
+for (const date of ['2027-01-16', '2027-01-17']) {
+  assert.equal(getShSlots(date), 'holiday');
+  assert.equal(slots(date, [], new Set()), 'holiday');
+  assert.equal(slots(date, [{...rows[0], date}], new Set()), 'holiday', 'closure overrides published slots');
+  assert.match(SHUTTLE_SPECIAL_MSG[date], /축제로 인한 도로 통제/);
+}
+assert.notEqual(getShSlots('2027-01-15'), 'holiday');
+assert.notEqual(getShSlots('2027-01-18'), 'holiday');
+console.log('20 published shuttle regression checks passed');

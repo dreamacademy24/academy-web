@@ -9,10 +9,13 @@ export const SHUTTLE_HOLIDAYS = new Set([
   '2026-10-30','2026-10-31',
   '2026-11-01','2026-11-30',
   '2026-12-24','2026-12-25','2026-12-31',
+  '2027-01-16','2027-01-17',
 ]);
 
 export const SHUTTLE_SPECIAL_MSG: Record<string,string> = {
   '2026-08-09': '⚠️ 아이언맨 도로통제로 투어셔틀 불가',
+  '2027-01-16': '시눌룩 축제로 인한 도로 통제로 투어셔틀 운영 불가',
+  '2027-01-17': '시눌룩 축제로 인한 도로 통제로 투어셔틀 운영 불가',
 };
 
 export interface ShSlot { time: string; name: string; return: string; note?: string; }

@@ -360,7 +360,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
                     )}
                   </div>
                   {isHoliday && (
-                    <div title={SHUTTLE_SPECIAL_MSG[c.date] || "셔틀 휴무"} style={{ fontSize: 10.5, fontWeight: 700, color: "#b45309", background: "#fef3c7", borderRadius: 6, padding: "3px 5px", textAlign: "center" }}>🚫 휴무</div>
+                    <div title={SHUTTLE_SPECIAL_MSG[c.date] || "셔틀 휴무"} style={{ fontSize: 10.5, fontWeight: 700, color: "#b45309", background: "#fef3c7", borderRadius: 6, padding: "3px 5px", textAlign: "center" }}>🚫 {SHUTTLE_SPECIAL_MSG[c.date] || "휴무"}</div>
                   )}
                   {dayGroups.map(g => (
                     <button key={g.key} onClick={() => pickTour(g.key)} title={`${g.title} · 출발 ${g.time || "-"}${g.ret ? " · 복귀 " + g.ret : ""}${g.note ? " · " + g.note : ""} · ${g.people}명`} style={chipStyle(g)}>
