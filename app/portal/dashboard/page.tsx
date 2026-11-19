@@ -30,6 +30,8 @@ export default function PortalDashboard() {
   const [shuttleApps, setShuttleApps] = useState<any[]>([]);
   const [hasConfirmedTutor, setHasConfirmedTutor] = useState(false);
   const [confirmedTutorIds, setConfirmedTutorIds] = useState<string[]>([]);
+  const [onlinePending, setOnlinePending] = useState(0);
+  const [holidayDismissKey, setHolidayDismissKey] = useState("");
   const [stayHolidays, setStayHolidays] = useState<Array<{ date: string; name: string }> | null>(null);
   const [dashStudents, setDashStudents] = useState<any[]>([]);
   const [hasNewNotes, setHasNewNotes] = useState(false);
@@ -293,6 +295,9 @@ export default function PortalDashboard() {
       const list = await m.fetchDeployedHolidays(supabase);
       const hits = m.holidaysInRange(list, ci, co);
       if (cancelled || hits.length === 0) return;
+      const dismissKey = "stay_holiday_dismissed:" + bookingInfo.id + ":" + hits.map(h => h.date + ":" + h.name).join("|");
+      setHolidayDismissKey(dismissKey);
+      if (localStorage.getItem(dismissKey) === "1") return;
       const key = "stay_holiday_seen";
       const todayKey = hits.map(h => h.date).join("|") + "|" + new Date().toISOString().slice(0, 10);
       if (localStorage.getItem(key) === todayKey) return;
@@ -373,6 +378,11 @@ export default function PortalDashboard() {
     { icon: "🍽", title: "식단", desc: "학생 점심(아카데미) · 드림하우스(올인원) 식단표", ready: feats ? feats.meal : true, href: "/portal/meal-menu" },
     { icon: "🗓", title: "상담 예약", desc: "학습 상담 일정 확인 및 예약", ready: feats ? feats.consultation : true, href: "/portal/consultation" },
   ];
+  if (onlinePending > 0) {
+    const index = allCards.findIndex(c => c.title === "화상영어");
+    const [online] = allCards.splice(index, 1);
+    allCards.splice(1, 0, { ...online, ready: true, href: onlineApplyHref, desc: "미신청 학생이 있어요. 수업 일정을 선택해주세요." });
+  }
   const cards = ocOnly ? allCards.filter(c => c.title === "화상영어" || c.title === "공지사항") : allCards;
 
   const memberCards = authUser ? cards : cards;
@@ -499,7 +509,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         )}
       </div>
 
-      {bookingInfo?.id && <OnlineApplicationReminder key={bookingInfo.id} bookingId={bookingInfo.id} href={onlineApplyHref} />}
+      {bookingInfo?.id && <OnlineApplicationReminder key={bookingInfo.id} bookingId={bookingInfo.id} href={onlineApplyHref} blocked={!!stayHolidays || !!popupNotice} onPending={setOnlinePending} />}
 
       {/* 체류 기간 휴무일 사전 안내 팝업 */}
       {stayHolidays && (
@@ -664,7 +674,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
               <span className="db-badge">{mealNew > 99 ? "99+" : mealNew}</span>
             )}
             <div className="icon">{c.icon}</div>
-            <h3>{c.title}</h3>
+            <h3>{c.title}{c.title === "화상영어" && onlinePending > 0 && <span style={{ display: "inline-block", marginLeft: 8, padding: "4px 8px", borderRadius: 8, background: "#fff3c4", color: "#895200", fontSize: 12, whiteSpace: "nowrap" }}>신청하세요 →</span>}</h3>
             <p>{c.desc}</p>
             {(c as { subDesc?: string }).subDesc && (
               <p style={{ fontSize: 10.5, color: "#9ca3af", marginTop: 4, fontWeight: 600 }}>{(c as { subDesc: string }).subDesc}</p>
