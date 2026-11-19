@@ -5,6 +5,7 @@ import { resolvePortalFeatures } from "@/lib/portalFeatures";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import PortalPushButton from "@/components/PortalPushButton";
+import OnlineApplicationReminder from "@/components/OnlineApplicationReminder";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -498,13 +499,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         )}
       </div>
 
-      {feats?.online_class && !ocHasEnrollment && (
-        <a href={onlineApplyHref} style={{display:"block",marginBottom:20,padding:22,border:"1px solid #c7d2fe",borderRadius:16,background:"#eef2ff",textDecoration:"none",color:"#312e81"}}>
-          <strong style={{display:"block",fontSize:18,lineHeight:1.6}}>화상영어가 오픈되었습니다. 신청하세요!</strong>
-          <span style={{display:"block",fontSize:14,lineHeight:1.7,marginTop:6}}>연수 전·후 화상영어 수업의 희망 일정과 학생을 선택해주세요.</span>
-          <span style={{display:"inline-block",marginTop:12,fontWeight:700}}>화상영어 신청하기 →</span>
-        </a>
-      )}
+      {bookingInfo?.id && <OnlineApplicationReminder key={bookingInfo.id} bookingId={bookingInfo.id} href={onlineApplyHref} />}
 
       {/* 체류 기간 휴무일 사전 안내 팝업 */}
       {stayHolidays && (
