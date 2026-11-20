@@ -20,13 +20,19 @@ interface Booking {
   base_price?:number; final_price?:number; balance_date?:string; updated_at?:string;
   flight_in?:string; flight_out?:string; house_no?:string; pickup?:string; drop_off?:string;
   pickup_place?:string; special_request?:string; agency?:string; accom_room?:string;
+  paid_amount?:number;
   billing_items?:any; locals?:any; confirmed?:boolean;
   booking_type?:string; accom_weeks?:number;
   is_all_in_one?:boolean;
   academy_start?:string; academy_end?:string;
 }
 
+const isCancelledBooking=(b:Booking)=>/취소|cancelled|canceled/i.test(b.status||'');
+const paidCancellation=(b:Booking)=>isCancelledBooking(b)&&Number(b.paid_amount)>0;
+const cancelBadge=(b:Booking)=>isCancelledBooking(b)?<strong className="cancel-label">취소</strong>:null;
+
 const SC:Record<string,{bg:string;color:string}>={
+  "취소":{bg:"#fee2e2",color:"#b91c1c"},
   "접수":{bg:"#fef3c7",color:"#92400e"},
   "인보이스발행":{bg:"#dbeafe",color:"#1e40af"},
   "영수증발행":{bg:"#dcfce7",color:"#166534"},
@@ -226,6 +232,7 @@ export default function AdminBookingsPage(){
   const [stuOnly,setStuOnly]=useState(false); // /admin/students 독립 페이지 모드
   const [confirmSearch,setConfirmSearch]=useState("");
   const [rcpUnpaidOnly,setRcpUnpaidOnly]=useState(false);
+  const [receiptSearch,setReceiptSearch]=useState("");
   const [confirmSort,setConfirmSort]=useState<{key:string;asc:boolean}>({key:"checkin_date",asc:true});
   const [showAllCols,setShowAllCols]=useState(false); // 확정예약 전체 컬럼 토글
   const [assignees,setAssignees]=useState<string[]>([]);
@@ -794,22 +801,25 @@ export default function AdminBookingsPage(){
     return "9999-12-31";
   }
   const isPast=(b:Booking)=>estimateEnd(b)<_todayStr;
-  const _stBase=filter==="전체"?bookings.filter(b=>b.status!=="완료"&&!String(b.status||"").includes("취소")):filter==="취소"?bookings.filter(b=>String(b.status||"").includes("취소")):bookings.filter(b=>b.status===filter);
+  const _stBase=filter==="전체"?bookings.filter(b=>b.status!=="완료"||!!listSearch.trim()):filter==="취소"?bookings.filter(b=>String(b.status||"").includes("취소")):bookings.filter(b=>b.status===filter);
   // 다온맘 미입금(룸확보 전) 건은 예약내역에서 제외 — 부킹리스트·다온맘 탭에서만 관리 (취소 필터는 예외)
-  const _stBase2=filter==="취소"?_stBase:_stBase.filter(b=>!(b.agency==="다온맘"&&!(Number((b as unknown as Record<string,unknown>).paid_amount)>0)));
+  const _stBase2=filter==="취소"?_stBase:_stBase.filter(b=>isCancelledBooking(b)||!(b.agency==="다온맘"&&!(Number((b as unknown as Record<string,unknown>).paid_amount)>0)));
   const statusFiltered=_stBase2;
-  const filtered=listPeriod==="현재"?statusFiltered.filter(b=>!isPast(b)):listPeriod==="지난"?statusFiltered.filter(b=>isPast(b)):statusFiltered;
-  const searchedList=filtered.filter(b=>!checkinMonth||(checkinMonth==="undated"?!b.checkin_date:String(b.checkin_date||"").slice(0,7)===checkinMonth)).filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.checkin_date||"9999").localeCompare(String(y.checkin_date||"9999"))||String(x.reservation_no||"").localeCompare(String(y.reservation_no||"")));
+  const filtered=listSearch.trim()?statusFiltered:listPeriod==="현재"?statusFiltered.filter(b=>!isPast(b)):listPeriod==="지난"?statusFiltered.filter(b=>isPast(b)):statusFiltered;
+  const searchedList=filtered.filter(b=>!!listSearch.trim()||!checkinMonth||(checkinMonth==="undated"?!b.checkin_date:String(b.checkin_date||"").slice(0,7)===checkinMonth)).filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.checkin_date||"9999").localeCompare(String(y.checkin_date||"9999"))||String(x.reservation_no||"").localeCompare(String(y.reservation_no||"")));
   const pastCount=statusFiltered.filter(b=>isPast(b)).length;
   const rcpList=bookings.filter(b=>{
-    if(receiptMonth && (receiptMonth==="undated"?!!balanceDateOf(b):balanceDateOf(b).slice(0,7)!==receiptMonth))return false;
+    const q=receiptSearch.trim().toLowerCase();
+    if(q&&![b.booker_name,b.reservation_no,stuNames(b.students)].some(v=>String(v||'').toLowerCase().includes(q)))return false;
+    if(!receiptSearch.trim() && receiptMonth && (receiptMonth==="undated"?!!balanceDateOf(b):balanceDateOf(b).slice(0,7)!==receiptMonth))return false;
+    if(paidCancellation(b))return true;
     if(!["영수증발행","완료"].includes(b.status))return false;
     // 과거 예약(체크아웃 지난) 제외 — 현재+미래만
     const co=b.checkout_date||"";
-    if(co&&co<_todayStr)return false;
+    if(!receiptSearch.trim()&&co&&co<_todayStr)return false;
     return true;
   });
-  const confirmList=bookings.filter(b=>["영수증발행","결제완료","완료"].includes(b.status));
+  const confirmList=bookings.filter(b=>["영수증발행","결제완료","완료"].includes(b.status)||paidCancellation(b));
   const confirmFiltered=confirmFilter==="전체"?confirmList:confirmList.filter(b=>b.status===confirmFilter);
 
   function getDday(dateStr?:string){
@@ -872,6 +882,10 @@ export default function AdminBookingsPage(){
 .ss td{font-size:11px;padding:5px 4px;border:1px solid #f1f5f9;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;}
 .ss tbody tr:hover td{background:#eff6ff;}
 .ss tbody tr.confirmed-row td{background:#f0fdf4;}
+.cancelled-booking,.tbl tbody tr.cancelled-booking td,.ss tbody tr.cancelled-booking td{background:#fee2e2!important;}
+.cancelled-booking td:not(:last-child){text-decoration:line-through;text-decoration-color:#ef4444;}
+.cancel-label{display:inline-block;background:#dc2626;color:white;border-radius:4px;padding:2px 6px;margin-right:5px;font-size:11px;text-decoration:none;white-space:nowrap;}
+.cancelled-booking:hover td{background:#fecaca!important;}
 .ss td.wrap{white-space:normal;min-width:80px;max-width:140px;word-break:break-word;overflow:hidden;}
 .ss .chk{width:16px;height:16px;cursor:pointer;accent-color:#16a34a;}
 .cf-search{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
@@ -1024,14 +1038,14 @@ export default function AdminBookingsPage(){
           <button className="sub-tab" style={{background:"#dcfce7",color:"#166534"}} onClick={()=>exportListXlsx(searchedList)}>📥 엑셀</button>
         </span>
       </div>
-      {(()=>{const un=searchedList.filter(b=>(b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim());return un.length>0?(<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 14px",margin:"0 0 10px",fontSize:13,color:"#b91c1c",fontWeight:700,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:16}}>❗</span>드림하우스 룸 미배정 {un.length}건 — 오버부킹 주의! 각 예약에 룸을 배정해 주세요.</div>):null;})()}
+      {(()=>{const un=searchedList.filter(b=>!isCancelledBooking(b)&&(b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim());return un.length>0?(<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 14px",margin:"0 0 10px",fontSize:13,color:"#b91c1c",fontWeight:700,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:16}}>❗</span>드림하우스 룸 미배정 {un.length}건 — 오버부킹 주의! 각 예약에 룸을 배정해 주세요.</div>):null;})()}
       <div className="tbl-w"><table className="tbl" style={{tableLayout:'fixed',width:'100%',minWidth:1360}}><thead><tr>
         <th style={{width:95}}>예약번호</th><th style={{width:80}}>구분</th><th style={{width:105}}>상태</th><th style={{width:95}}>담당자</th><th style={{width:95}}>케어담당</th><th style={{width:130}}>예약자명</th><th style={{width:170}}>학생이름</th><th style={{width:95}}>체크인</th><th style={{width:95}}>숙소</th><th style={{width:85}}>접수일</th><th style={{width:430}}>액션</th>
       </tr></thead><tbody>
         {searchedList.length===0?<tr><td colSpan={10} className="empty">{listSearch?"검색 결과가 없습니다.":"예약이 없습니다."}</td></tr>:
         searchedList.map(b=>{
           const sc=SC[b.status]||SC["접수"];
-          return(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
+          return(<tr key={b.id} className={isCancelledBooking(b)?"cancelled-booking":""} onClick={()=>router.push("/admin/bookings/"+b.id)}>
             <td style={{fontWeight:600,color:"#1a6fc4",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.reservation_no}>{(b.reservation_no||"").split("-").pop()}</td>
             <td>{(()=>{const cat=getBookingCategory(b as never);return(<div style={{display:"flex",flexDirection:"column",gap:2,alignItems:"flex-start"}}>{cat.pkg==="올인원"?<span style={{display:"inline-block",fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700}}>🌟 올인원</span>:cat.pkg==="패키지"?<span style={{display:"inline-block",fontSize:10.5,background:"#dcfce7",color:"#166534",padding:"1px 6px",borderRadius:10,fontWeight:700}}>패키지</span>:<span style={{display:"inline-block",fontSize:10.5,background:"#f1f5f9",color:"#64748b",padding:"1px 6px",borderRadius:10,fontWeight:700}}>비패키지</span>}<span style={{fontSize:10,fontWeight:800,color:"#4338ca"}}>{cat.comp}</span></div>);})()}</td>
             <td onClick={e=>e.stopPropagation()}>
@@ -1046,10 +1060,10 @@ export default function AdminBookingsPage(){
             </td>
             <td><select className="asg" value={b.assignee||""} style={{color:b.assignee?"#1a6fc4":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,assignee:v}:x));}}><option value="">미지정</option>{assignees.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
             <td><select className="asg" value={b.care_assignee||""} style={{color:b.care_assignee?"#0d9488":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({care_assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,care_assignee:v}:x));}} title="학생 케어 담당 (컨디션·출석·투약 체크)"><option value="">미지정</option>{assignees.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
-            <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.booker_name}>{b.booker_name}{agencyShort(b.agency)!==""&&<span title={"유학원: "+(b.agency||"")} style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#eeedfe",color:"#3c3489",padding:"1px 6px",borderRadius:10,fontWeight:800,verticalAlign:"middle"}}>🏢 {agencyShort(b.agency)}</span>}</td>
+            <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.booker_name}>{cancelBadge(b)}{b.booker_name}{agencyShort(b.agency)!==""&&<span title={"유학원: "+(b.agency||"")} style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#eeedfe",color:"#3c3489",padding:"1px 6px",borderRadius:10,fontWeight:800,verticalAlign:"middle"}}>🏢 {agencyShort(b.agency)}</span>}</td>
             <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
-            {(()=>{const _unrm=((b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim());return(<td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",...(_unrm?{background:"#dc2626",color:"#fff",fontWeight:800}:{})}} title={(b.accom_type||"미정")+(_unrm?" · 드림하우스 룸 미배정(오버부킹 주의)":"")}>{_unrm&&<span style={{fontWeight:800,marginRight:3}}>❗</span>}{b.accom_type||"미정"}{(b as any).academy_option&&<span title="숙소 단독 + 아카데미 별도 등록" style={{marginLeft:4,fontSize:10,fontWeight:800,background:"#eef2ff",color:"#4338ca",borderRadius:6,padding:"1px 6px",whiteSpace:"nowrap"}}>🏫+아카데미</span>}</td>);})()}
+            {(()=>{const _unrm=(!isCancelledBooking(b)&&(b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim());return(<td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",...(_unrm?{background:"#dc2626",color:"#fff",fontWeight:800}:{})}} title={(b.accom_type||"미정")+(_unrm?" · 드림하우스 룸 미배정(오버부킹 주의)":"")}>{_unrm&&<span style={{fontWeight:800,marginRight:3}}>❗</span>}{b.accom_type||"미정"}{(b as any).academy_option&&<span title="숙소 단독 + 아카데미 별도 등록" style={{marginLeft:4,fontSize:10,fontWeight:800,background:"#eef2ff",color:"#4338ca",borderRadius:6,padding:"1px 6px",whiteSpace:"nowrap"}}>🏫+아카데미</span>}</td>);})()}
             <td>{fDate(b.created_at)}</td>
             <td onClick={e=>e.stopPropagation()}>
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
@@ -1065,17 +1079,17 @@ export default function AdminBookingsPage(){
         {searchedList.length===0?<div className="empty">{listSearch?"검색 결과가 없습니다.":"예약이 없습니다."}</div>:
         searchedList.map(b=>{
           const sc=SC[b.status]||SC["접수"];
-          return(<div key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
+          return(<div key={b.id} className={isCancelledBooking(b)?"cancelled-booking":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
               <span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span>
             </div>
-            <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{b.booker_name}</div>
+            <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{cancelBadge(b)}{b.booker_name}</div>
             <div style={{fontSize:13,color:"#6b7c93",marginBottom:4}}>{stuNames(b.students)}</div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#94a3b8"}}>
               <span>체크인: {b.checkin_date||"미정"}</span><span>{b.assignee||"미지정"}</span>
             </div>
-            {((b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim())&&<div style={{marginTop:6,fontSize:12,color:"#dc2626",fontWeight:700}}>❗ 드림하우스 룸 미배정 (오버부킹 주의)</div>}
+            {(!isCancelledBooking(b)&&(b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim())&&<div style={{marginTop:6,fontSize:12,color:"#dc2626",fontWeight:700}}>❗ 드림하우스 룸 미배정 (오버부킹 주의)</div>}
             <div style={{display:"flex",gap:6,marginTop:10}} onClick={e=>e.stopPropagation()}>
               <button className="act act-b" style={{flex:1,minHeight:40}} onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act act-g" style={{flex:1,minHeight:40}} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")}>영수증</button>
@@ -1091,14 +1105,15 @@ export default function AdminBookingsPage(){
       const rcpInfo=(b:Booking)=>{
         const fin=b.final_price||b.base_price||0;
         const paid=Number((b as unknown as Record<string,unknown>).paid_amount)||0;
-        const remain=Math.max(0,fin-paid);
+        const remain=isCancelledBooking(b)?0:Math.max(0,fin-paid);
         const bd=balanceDateOf(b);const overdue=!!(bd&&remain>0&&bd<=calYmd(new Date()));
         return {fin,paid,remain,overdue,bd};
       };
-      const unpaidAll=rcpList.filter(b=>{const i=rcpInfo(b);return i.fin>0&&i.remain>0;});
+      const unpaidAll=rcpList.filter(b=>{if(isCancelledBooking(b))return false;const i=rcpInfo(b);return i.fin>0&&i.remain>0;});
       const overdueAll=unpaidAll.filter(b=>rcpInfo(b).overdue);
       const shownRcp=rcpUnpaidOnly?unpaidAll:rcpList;
       const stBadge=(b:Booking)=>{
+        if(isCancelledBooking(b))return <span>{cancelBadge(b)} 입금 기록 보관</span>;
         const i=rcpInfo(b);
         if(i.fin<=0)return <span style={{color:"#94a3b8",fontSize:12}}>-</span>;
         if(i.remain<=0)return <span style={{background:"#f0fdf4",color:"#166534",border:"1px solid #bbf7d0",borderRadius:7,padding:"2px 9px",fontSize:11.5,fontWeight:800,whiteSpace:"nowrap"}}>✅ 완납</span>;
@@ -1110,7 +1125,7 @@ export default function AdminBookingsPage(){
         <button className={`sub-tab${!rcpUnpaidOnly?" ac":""}`} onClick={()=>setRcpUnpaidOnly(false)}>전체 ({rcpList.length})</button>
         <button className={`sub-tab${rcpUnpaidOnly?" ac":""}`} style={{background:rcpUnpaidOnly?"#dc2626":"#fef2f2",color:rcpUnpaidOnly?"#fff":"#b91c1c",fontWeight:800}} onClick={()=>setRcpUnpaidOnly(true)}>❗ 잔금 미납만 ({unpaidAll.length})</button>
         {overdueAll.length>0&&<span style={{fontSize:12,fontWeight:800,color:"#dc2626"}}>⏰ 잔금일 지난 미납 {overdueAll.length}건 — 입금 안내 필요!</span>}
-        <span style={{marginLeft:"auto",fontSize:11.5,color:"#94a3b8"}}>입금액 = 영수증 지불내역 저장 기준 · 행 클릭 = 영수증</span>
+        <input aria-label="영수증 검색" placeholder="예약자·학생·예약번호 검색" value={receiptSearch} onChange={e=>setReceiptSearch(e.target.value)} style={{padding:"8px 10px",border:"1px solid #cbd5e1",borderRadius:8}}/><span style={{marginLeft:"auto",fontSize:11.5,color:"#94a3b8"}}>입금액 = 영수증 지불내역 저장 기준 · 행 클릭 = 영수증</span>
       </div>
       <div className="tbl-w"><table className="tbl"><thead><tr>
         <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>잔금일</th><th>예약금</th><th>잔금</th><th>최종금액</th><th>입금액</th><th>입금상태</th>
@@ -1122,13 +1137,13 @@ export default function AdminBookingsPage(){
           const bal=fin>1000000?fin-1000000:0;
           const i=rcpInfo(b);
           return(
-          <tr key={b.id} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")} style={i.overdue?{background:"#fef2f2"}:undefined}>
+          <tr key={b.id} className={isCancelledBooking(b)?"cancelled-booking":""} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")} style={i.overdue?{background:"#fef2f2"}:undefined}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
-            <td>{b.booker_name}</td><td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
+            <td>{cancelBadge(b)}{b.booker_name}</td><td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
             <td style={i.overdue?{color:"#dc2626",fontWeight:800}:undefined} title={b.balance_date?undefined:"체크인 2개월 전 자동 계산"}>{i.bd||"-"}{!b.balance_date&&i.bd?<span style={{fontSize:10,color:"#94a3b8",marginLeft:4}}>자동</span>:null}</td>
             <td>{fmt(dep)}</td>
-            <td>{fmt(bal)}</td>
+            <td>{isCancelledBooking(b)?"—":fmt(bal)}</td>
             <td style={{fontWeight:700}}>{fmt(fin)}</td>
             <td style={{fontWeight:700,color:i.paid>0?"#166534":"#94a3b8"}}>{i.paid>0?fmt(i.paid):"-"}</td>
             <td>{stBadge(b)}</td>
@@ -1139,12 +1154,12 @@ export default function AdminBookingsPage(){
       <div className="mob-cards" style={{display:"none",flexDirection:"column",gap:12}}>
         {shownRcp.length===0?<div className="empty">영수증 발행 내역이 없습니다.</div>:
         shownRcp.map(b=>(
-          <div key={b.id} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
+          <div key={b.id} className={isCancelledBooking(b)?"cancelled-booking":""} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
               {stBadge(b)}
             </div>
-            <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{b.booker_name} · {fmt(b.final_price)}</div>
+            <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{cancelBadge(b)}{b.booker_name} · {fmt(b.final_price)}</div>
             <div style={{fontSize:13,color:"#6b7c93"}}>{stuNames(b.students)} · 체크인: {b.checkin_date||"미정"}</div>
           </div>
         ))}
@@ -1168,6 +1183,7 @@ export default function AdminBookingsPage(){
       });
       // 누락 항목(직원이 아직 처리 안 한 것) 계산 — 통학형은 항공편 제외
       const missingItems=(b:Booking):string[]=>{
+        if(isCancelledBooking(b))return [];
         const isC=isCommuteBooking(b);
         const m:string[]=[];
         if(!isC && !(b.flight_in||"").trim())m.push("항공");
@@ -1183,6 +1199,7 @@ export default function AdminBookingsPage(){
         const isC=isCommuteBooking(b);
         if(confirmType==="통학형"&&!isC)return false;
         if(confirmType==="리조트"&&isC)return false;
+        if(paidCancellation(b))return true;
         const co=b.checkout_date||"";
         const ci=b.checkin_date||"";
         if(confirmPeriod==="전체")return true;
@@ -1270,19 +1287,19 @@ export default function AdminBookingsPage(){
         </tr></thead><tbody>
           {sorted.length===0?<tr><td colSpan={visCols.length+1} className="empty">확정 예약이 없습니다.</td></tr>:
           sorted.map(b=>{
-            const bdday=getBalanceDday(b.balance_date);
+            const bdday=isCancelledBooking(b)?null:getBalanceDday(b.balance_date);
             const isC=isCommuteBooking(b);
             const cat=getBookingCategory(b as never);
             const gubunLabel=cat.comp;
             const gc=gubunLabel.startsWith("드하")?{bg:"#dbeafe",color:"#1e40af"}:gubunLabel.startsWith("JP")?{bg:"#fce7f3",color:"#9d174d"}:gubunLabel.startsWith("C9")?{bg:"#e0e7ff",color:"#4338ca"}:{bg:"#f5f5f4",color:"#78716c"};
             const aioLabel=cat.pkg;
             const ac=aioLabel==="올인원"?{bg:"#fef3c7",color:"#92400e"}:aioLabel==="패키지"?{bg:"#dcfce7",color:"#166534"}:{bg:"#f1f5f9",color:"#64748b"};
-            return(<tr key={b.id} className={b.confirmed?"confirmed-row":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{cursor:"pointer"}}>
+            return(<tr key={b.id} className={isCancelledBooking(b)?"cancelled-booking":b.confirmed?"confirmed-row":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{cursor:"pointer"}}>
               <td style={{fontWeight:700,color:"#1a6fc4"}}>{shortNo(b.reservation_no)}</td>
               <td><span style={{fontSize:11,fontWeight:700,color:"#1a6fc4"}}>{b.assignee||"-"}</span></td>
               <td><span style={{display:"inline-block",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:10,background:gc.bg,color:gc.color}}>{gubunLabel}</span></td>
               <td><span style={{display:"inline-block",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:10,background:ac.bg,color:ac.color}}>{aioLabel}</span></td>
-              <td style={{fontWeight:600}}>{b.booker_name}</td>
+              <td style={{fontWeight:600}}>{cancelBadge(b)}{b.booker_name}</td>
               <td style={{color:"#475569",fontSize:11}}>{stuNames(b.students)}</td>
               <td style={{fontWeight:600}}>{b.checkin_date||"-"}</td>
               <td>{b.checkout_date||"-"}</td>
@@ -1293,9 +1310,9 @@ export default function AdminBookingsPage(){
               <td className="wrap" title={b.special_request||""} style={{cursor:b.special_request?"pointer":"default",maxWidth:expandedSr.has(b.id)?"none":160}} onClick={e=>{e.stopPropagation();if(!b.special_request)return;setExpandedSr(prev=>{const n=new Set(prev);if(n.has(b.id))n.delete(b.id);else n.add(b.id);return n;});}}>
                 {!b.special_request?"-":expandedSr.has(b.id)?b.special_request:(b.special_request.length>22?b.special_request.slice(0,22)+"...":b.special_request)}
               </td>
-              <td>{(()=>{const m=missingItems(b);return m.length===0?<span style={{color:"#16a34a",fontWeight:700}}>✓</span>:m.map((x,i)=><span key={i} style={{display:"inline-block",margin:"1px",fontSize:10,background:"#fffbeb",color:"#b45309",border:"1px solid #fde68a",padding:"1px 5px",borderRadius:8,fontWeight:700}}>{x}</span>);})()}</td>
+              <td>{isCancelledBooking(b)?cancelBadge(b):(()=>{const m=missingItems(b);return m.length===0?<span style={{color:"#16a34a",fontWeight:700}}>✓</span>:m.map((x,i)=><span key={i} style={{display:"inline-block",margin:"1px",fontSize:10,background:"#fffbeb",color:"#b45309",border:"1px solid #fde68a",padding:"1px 5px",borderRadius:8,fontWeight:700}}>{x}</span>);})()}</td>
               <td onClick={e=>e.stopPropagation()} style={{textAlign:"center"}}>
-                <input type="checkbox" className="chk" checked={!!b.confirmed} onChange={async e=>{
+                <input type="checkbox" className="chk" disabled={isCancelledBooking(b)} checked={!!b.confirmed} onChange={async e=>{
                   const v=e.target.checked;
                   await supabase.from("bookings").update({confirmed:v}).eq("id",b.id);
                   setBookings(prev=>prev.map(x=>x.id===b.id?{...x,confirmed:v}:x));
