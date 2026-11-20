@@ -1,5 +1,6 @@
 'use client';
 import { portalFetch } from "@/lib/portalFetch";
+import CheckinPickup from '@/app/admin/checkin-details/CheckinPickup';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { resolvePortalSession } from "@/lib/portalSession";
@@ -280,6 +281,7 @@ export default function PortalCheckinDetailPage() {
   }
 
   return (<>
+    {!loading && bookingId && <CheckinPickup bookingId={bookingId} checkinDate="" arrivalDate={flightForm.flight_in_date} guest/>}
     <style>{`
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:'Noto Sans KR',sans-serif;background:#f7f9fc;color:#1a1a2e;line-height:1.6}

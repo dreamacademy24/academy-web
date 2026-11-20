@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import CheckinPickup from '@/app/admin/checkin-details/CheckinPickup';
 import { useParams } from "next/navigation";
 
 interface FormState {
@@ -334,6 +335,7 @@ export default function CheckinFormPage() {
 
       {loading && <div className="notice">로딩 중...</div>}
       {!loading && error && <div className="notice err">{error}</div>}
+      {!loading && !error && bookingId && <CheckinPickup bookingId={bookingId} checkinDate="" arrivalDate={flightForm.flight_in_date} token={token} guest/>}
       {!loading && !error && submitted && (
         <div className="notice ok" style={{textAlign:"center"}}>
           <div style={{marginBottom:12}}>✅ 이미 작성된 설문입니다. 감사합니다! 🙏</div>

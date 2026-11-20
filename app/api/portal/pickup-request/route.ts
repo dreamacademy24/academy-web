@@ -48,6 +48,11 @@ export async function POST(req: Request) {
     }
     if (!request_date) return NextResponse.json({ error: 'request_date required' }, { status: 400 })
 
+    if(request_type === 'arrival') {
+      const {data:plans,error:planError}=await supabase.from('pickup_requests').select('id,notes').eq('booking_id',booking_id).in('request_type',['pickup','arrival']).not('status','in','(cancelled,취소)');
+      if(planError)return NextResponse.json({error:'픽업 내역을 확인하지 못했습니다.'},{status:500});
+      if(plans?.some(p=>(p.notes || '').includes('[체크인 숙소 픽업]')))return NextResponse.json({error:'공항 외 픽업 요청이 등록되어 있습니다. 공항 외 픽업 요청 칸에서 수정해주세요.'},{status:409});
+    }
     const row: Record<string, unknown> = {
       booking_id,
       request_type,

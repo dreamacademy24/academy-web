@@ -18,6 +18,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { getShSlots, SHUTTLE_HOLIDAYS, SHUTTLE_SPECIAL_MSG } from "./shuttleTours";
+import { isHotelPickup } from './checkinPickup';
 
 export type VehKind =
   | "pickup"      // 공항 → 숙소
@@ -217,6 +218,7 @@ function accomFromType(t?: string): string {
 // 예약 항공편(체크인디테일에서 확정 → bookings.flight_*)에서 공항 픽업/드랍/환승 파생.
 // pickup_requests에 이미 있는 건(booking_id+유형) 중복 제외 → "놓친 공항차량" 방지.
 export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]): VehMovement[] {
+  const hotelBookings = new Set((pickups || []).filter(p => ['pickup','arrival'].includes(p.request_type) && isHotelPickup(p.notes) && !['cancelled', '취소'].includes(p.status || '')).map(p => p.booking_id));
   const covered = new Set<string>();
   for (const p of pickups || []) {
     const t = PICKUP_KIND[p.request_type];
@@ -235,7 +237,7 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
     const inDate = String(b.flight_in_date || b.checkin_date || "").slice(0, 10);
     const inTime=b.flight_in_time||b.flight_in?.match(/\b(\d{1,2}:\d{2})\b/)?.[1];
     const inOperating=airportOperatingDate(inDate,inTime);
-    if (inDate && (AIRPORT.test(b.pickup_place || "") || b.flight_in_date || b.flight_in_time || b.flight_in) && !covered.has(`${b.id}_pickup_${inDate}`) && !covered.has(`${b.id}_pickup_${inOperating}`)) {
+    if (!hotelBookings.has(b.id) && inDate && (AIRPORT.test(b.pickup_place || "") || b.flight_in_date || b.flight_in_time || b.flight_in) && !covered.has(`${b.id}_pickup_${inDate}`) && !covered.has(`${b.id}_pickup_${inOperating}`)) {
       const dest = combo ? accomLabel(b.seg1_type, room) : (room || accomFromType(b.accom_type) || "숙소");
       out.push({
         id: `bk_in_${b.id}`, date: inOperating, time: inTime || "", sortTime: to24h(inTime),
@@ -283,17 +285,18 @@ const PICKUP_KIND: Record<string, VehKind> = {
 };
 export function pickupMovements(rows: RawPickup[]): VehMovement[] {
   return (rows || []).filter(p => !["cancelled", "취소"].includes(p.status || "")).map((p) => {
-    const kind = PICKUP_KIND[p.request_type] || "extra";
+    const hotelPickup = ['pickup','arrival'].includes(p.request_type) && isHotelPickup(p.notes);
+    const kind = hotelPickup ? 'transfer' : PICKUP_KIND[p.request_type] || "extra";
     const guest = p.bookings?.booker_name || p.guest_name || "-";
     const room = p.bookings?.house_no || p.bookings?.accom_room || "";
     const requestDate=String(p.request_date || '').slice(0,10);
-    const airportRun=kind==='pickup'||kind==='dropoff'||(/공항|airport|mcia/i.test([p.location,p.destination].join(' ')))||/\b[A-Z0-9]{2}\s?\d{3,4}\b/i.test([p.flight_info,p.notes].join(' '));
+    const airportRun=!hotelPickup&&(kind==='pickup'||kind==='dropoff'||(/공항|airport|mcia/i.test([p.location,p.destination].join(' ')))||/\b[A-Z0-9]{2}\s?\d{3,4}\b/i.test([p.flight_info,p.notes].join(' ')));
     const direction=kind==='dropoff'||p.request_type==='extra_drop'?'출발':'도착';
     const flightDate=p.notes?.match(/다음 날 (\d{4}-\d{2}-\d{2})/)?.[1]||p.flight_info?.match(/\b(\d{4}-\d{2}-\d{2})\b/)?.[1]||requestDate;
     const flightTime=p.flight_info?.match(/\b(\d{1,2}:\d{2})\b/)?.[1]||p.request_time||'';
     const explicitOperating=p.notes?.match(/\[야간 운영일 (\d{4}-\d{2}-\d{2})\]/)?.[1];
     const operatingDate=airportRun?(explicitOperating||airportOperatingDate(flightDate,flightTime)):requestDate;
-    const displayTime=p.request_time||flightTime;
+    const displayTime=hotelPickup?(p.request_time||''):p.request_time||flightTime;
     return {
       id: `pk_${p.id}`,
       booking_id: p.booking_id,

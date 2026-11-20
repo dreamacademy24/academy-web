@@ -41,7 +41,10 @@ function PrintSet(){
             const parse=(v:string,fallback:unknown)=>{try{return JSON.parse(v)||fallback;}catch{return fallback;}};
             const beds=parse(d.bed_setting,{room1:'',room2:'',room3:''}),sims=parse(d.usim_request,[]);
             const snapResponse=await fetch('/api/invoice/snapshot?booking_id='+encodeURIComponent(id));if(!snapResponse.ok&&snapResponse.status!==404)throw Error('정산 정보를 불러오지 못했습니다.');const snap=(await snapResponse.json()).snapshot||{};const saved=typeof snap.saved_data==='string'?parse(snap.saved_data,{}):snap.saved_data;
-            const html=buildGuestDetails(b,d,beds,sims,saved?.billing?.locals||[],b.flight_images||[]);
+            const pickupResponse=await fetch('/api/admin/checkin-pickup?bookingId='+encodeURIComponent(id),{cache:'no-store'});
+            if(!pickupResponse.ok)throw Error('실제 픽업 약속을 불러오지 못했습니다.');
+            const pickupData=await pickupResponse.json();
+            const html=buildGuestDetails(b,d,beds,sims,saved?.billing?.locals||[],b.flight_images||[],pickupData.pickups||[]);
             const doc=new DOMParser().parseFromString(html,'text/html');doc.querySelectorAll('script').forEach(n=>n.remove());
             content={nodes:Array.from(doc.body.children) as HTMLElement[],styles:Array.from(doc.querySelectorAll('style'))};
           }else content=await source((kind==='checklist'?'/dreamhouse-checklist':kind==='medicine'?'/admin/med-form':'/admin/checkin-card')+'?bookingId='+encodeURIComponent(id),kind==='checklist'?'#dreamhouse-print-sheet[data-booking-ready="true"]':kind==='medicine'?'.page':'#pickup-print-sheet');

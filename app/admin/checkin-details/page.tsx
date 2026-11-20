@@ -1,4 +1,5 @@
 "use client";
+import CheckinPickup from './CheckinPickup';
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import {buildGuestDetails} from "@/lib/guestDetailsPrint";
 import MedicationReceipts from "@/components/MedicationReceipts";
@@ -351,8 +352,13 @@ function CheckinDetailsInner() {
   }
 
   // ── GUEST DETAILS 인쇄 시트 (EN/KR 공용, 인보이스 스타일 컬러) ──
-  function printGuestDetails(b: Booking, d: Partial<Detail>) {
-    setPrintHtml(buildGuestDetails(b,d,bedConfig,simCards,localItems,flightImages));
+  async function printGuestDetails(b: Booking, d: Partial<Detail>) {
+    try {
+      const response = await fetch('/api/admin/checkin-pickup?bookingId=' + encodeURIComponent(b.id), {cache:'no-store'});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || '픽업 정보를 불러오지 못했습니다.');
+      setPrintHtml(buildGuestDetails(b,d,bedConfig,simCards,localItems,flightImages,data.pickups || []));
+    } catch (error) { toastErr(error instanceof Error ? error.message : '픽업 정보를 확인해주세요.'); }
   }
 
   function handlePrint() {
@@ -478,6 +484,7 @@ function CheckinDetailsInner() {
           </div>
         </div>
 
+        <CheckinPickup key={booking.id} bookingId={booking.id} checkinDate={booking.checkin_date} arrivalDate={flightInDate}/>
         {editing && (<div className="sec">
           <h2>체크인 디테일 입력</h2>
           <div className="fr">

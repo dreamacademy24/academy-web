@@ -1,3 +1,4 @@
+import { isHotelPickup, HOTEL_PICKUP_MARKER } from './checkinPickup';
 interface Booking {
   id: string; booker_name: string; booker_english?: string;
   accom_type?: string; accom_room?: string; house_no?: string;
@@ -80,7 +81,7 @@ function isPackage(t?: string): boolean {
     return s;
   }
 
-  export function buildGuestDetails(b: Booking, d: Partial<Detail>, bedConfig: {room1:string;room2:string;room3:string}, simCards: {plan:string}[], localItems: {name:string;amount:string}[], flightImages: string[]) {
+  export function buildGuestDetails(b: Booking, d: Partial<Detail>, bedConfig: {room1:string;room2:string;room3:string}, simCards: {plan:string}[], localItems: {name:string;amount:string}[], flightImages: string[], pickups: {request_date?:string;request_time?:string;location?:string;destination?:string;notes?:string}[] = []) {
     const dash = (v: unknown) => v === null || v === undefined || v === "" ? "-" : String(v).replace(/[&<>"\']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\'":"&#39;",'"':"&quot;"}[c]!));
     const label = (en:string,ko:string) => `${en}<small class="ko" lang="ko">${ko}</small>`;
     const L = {title:'GUEST DETAILS',name:label('GUEST NAME','예약자'),house:label('HOUSE NO.','하우스 번호'),
@@ -211,6 +212,7 @@ function isPackage(t?: string): boolean {
     <div class="fld"><div class="lbl">${L.name}</div><div class="val">${nameLine}</div></div>
     <div class="fld"><div class="lbl">${L.house}</div><div class="val">${houseNo}</div></div>
     <div class="fld"><div class="lbl">${L.pick}</div><div class="val">${arrFlight}</div></div>
+    ${pickups.filter(p => isHotelPickup(p.notes)).map(p => `<div class="fld"><div class="lbl">ACTUAL HOTEL PICK-UP<small class="ko">실제 숙소 픽업 · 필리핀 현지 시간</small></div><div class="val">${dash(p.request_date)} ${dash(p.request_time || "시간 미정")}<br>${dash(p.location)} → ${dash(p.destination)}<br>${dash((p.notes || "").replace(HOTEL_PICKUP_MARKER, "").trim())}</div></div>`).join("")}
     <div class="fld"><div class="lbl">${L.cin}</div><div class="val">${checkIn}</div></div>
     <div class="fld"><div class="lbl">${L.cout}</div><div class="val">${checkOut}</div></div>
     <div class="fld"><div class="lbl">${L.guest}</div><div class="val">${guests}</div></div>
