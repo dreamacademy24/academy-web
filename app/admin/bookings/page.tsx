@@ -29,7 +29,7 @@ interface Booking {
 
 const isCancelledBooking=(b:Booking)=>/취소|cancelled|canceled/i.test(b.status||'');
 const paidCancellation=(b:Booking)=>isCancelledBooking(b)&&Number(b.paid_amount)>0;
-const cancelBadge=(b:Booking)=>isCancelledBooking(b)?<strong className="cancel-label">취소</strong>:null;
+const cancelBadge=(b:Booking)=>paidCancellation(b)?<strong className="cancel-label">취소</strong>:null;
 
 const SC:Record<string,{bg:string;color:string}>={
   "취소":{bg:"#fee2e2",color:"#b91c1c"},
@@ -1044,8 +1044,8 @@ export default function AdminBookingsPage(){
       </tr></thead><tbody>
         {searchedList.length===0?<tr><td colSpan={10} className="empty">{listSearch?"검색 결과가 없습니다.":"예약이 없습니다."}</td></tr>:
         searchedList.map(b=>{
-          const sc=SC[b.status]||SC["접수"];
-          return(<tr key={b.id} className={isCancelledBooking(b)?"cancelled-booking":""} onClick={()=>router.push("/admin/bookings/"+b.id)}>
+          const sc=isCancelledBooking(b)&&!paidCancellation(b)?SC["완료"]:SC[b.status]||SC["접수"];
+          return(<tr key={b.id} className={paidCancellation(b)?"cancelled-booking":""} onClick={()=>router.push("/admin/bookings/"+b.id)}>
             <td style={{fontWeight:600,color:"#1a6fc4",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.reservation_no}>{(b.reservation_no||"").split("-").pop()}</td>
             <td>{(()=>{const cat=getBookingCategory(b as never);return(<div style={{display:"flex",flexDirection:"column",gap:2,alignItems:"flex-start"}}>{cat.pkg==="올인원"?<span style={{display:"inline-block",fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700}}>🌟 올인원</span>:cat.pkg==="패키지"?<span style={{display:"inline-block",fontSize:10.5,background:"#dcfce7",color:"#166534",padding:"1px 6px",borderRadius:10,fontWeight:700}}>패키지</span>:<span style={{display:"inline-block",fontSize:10.5,background:"#f1f5f9",color:"#64748b",padding:"1px 6px",borderRadius:10,fontWeight:700}}>비패키지</span>}<span style={{fontSize:10,fontWeight:800,color:"#4338ca"}}>{cat.comp}</span></div>);})()}</td>
             <td onClick={e=>e.stopPropagation()}>
@@ -1078,8 +1078,8 @@ export default function AdminBookingsPage(){
       <div className="mob-cards" style={{display:"none",flexDirection:"column",gap:12}}>
         {searchedList.length===0?<div className="empty">{listSearch?"검색 결과가 없습니다.":"예약이 없습니다."}</div>:
         searchedList.map(b=>{
-          const sc=SC[b.status]||SC["접수"];
-          return(<div key={b.id} className={isCancelledBooking(b)?"cancelled-booking":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
+          const sc=isCancelledBooking(b)&&!paidCancellation(b)?SC["완료"]:SC[b.status]||SC["접수"];
+          return(<div key={b.id} className={paidCancellation(b)?"cancelled-booking":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
               <span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span>
@@ -1137,7 +1137,7 @@ export default function AdminBookingsPage(){
           const bal=fin>1000000?fin-1000000:0;
           const i=rcpInfo(b);
           return(
-          <tr key={b.id} className={isCancelledBooking(b)?"cancelled-booking":""} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")} style={i.overdue?{background:"#fef2f2"}:undefined}>
+          <tr key={b.id} className={paidCancellation(b)?"cancelled-booking":""} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")} style={i.overdue?{background:"#fef2f2"}:undefined}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td>{cancelBadge(b)}{b.booker_name}</td><td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
@@ -1154,7 +1154,7 @@ export default function AdminBookingsPage(){
       <div className="mob-cards" style={{display:"none",flexDirection:"column",gap:12}}>
         {shownRcp.length===0?<div className="empty">영수증 발행 내역이 없습니다.</div>:
         shownRcp.map(b=>(
-          <div key={b.id} className={isCancelledBooking(b)?"cancelled-booking":""} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
+          <div key={b.id} className={paidCancellation(b)?"cancelled-booking":""} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
               {stBadge(b)}
@@ -1294,7 +1294,7 @@ export default function AdminBookingsPage(){
             const gc=gubunLabel.startsWith("드하")?{bg:"#dbeafe",color:"#1e40af"}:gubunLabel.startsWith("JP")?{bg:"#fce7f3",color:"#9d174d"}:gubunLabel.startsWith("C9")?{bg:"#e0e7ff",color:"#4338ca"}:{bg:"#f5f5f4",color:"#78716c"};
             const aioLabel=cat.pkg;
             const ac=aioLabel==="올인원"?{bg:"#fef3c7",color:"#92400e"}:aioLabel==="패키지"?{bg:"#dcfce7",color:"#166534"}:{bg:"#f1f5f9",color:"#64748b"};
-            return(<tr key={b.id} className={isCancelledBooking(b)?"cancelled-booking":b.confirmed?"confirmed-row":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{cursor:"pointer"}}>
+            return(<tr key={b.id} className={paidCancellation(b)?"cancelled-booking":b.confirmed?"confirmed-row":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{cursor:"pointer"}}>
               <td style={{fontWeight:700,color:"#1a6fc4"}}>{shortNo(b.reservation_no)}</td>
               <td><span style={{fontSize:11,fontWeight:700,color:"#1a6fc4"}}>{b.assignee||"-"}</span></td>
               <td><span style={{display:"inline-block",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:10,background:gc.bg,color:gc.color}}>{gubunLabel}</span></td>
