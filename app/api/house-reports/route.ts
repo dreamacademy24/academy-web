@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getStaffIdentity } from '@/lib/portalAuth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,6 +8,8 @@ const supabase = createClient(
 )
 
 export async function GET(req: Request) {
+  const staff = await getStaffIdentity(req)
+  if (!staff || !['korean_admin','korean_staff'].includes(staff.role)) return NextResponse.json({ error: '직원 로그인이 필요합니다.' }, { status: 401 })
   const { searchParams } = new URL(req.url)
   const action = searchParams.get('action')
 
@@ -38,12 +41,15 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const staff = await getStaffIdentity(req)
+    if (!staff || !['korean_admin','korean_staff'].includes(staff.role)) return NextResponse.json({ error: '직원 로그인이 필요합니다.' }, { status: 401 })
     const body = await req.json()
     const { action } = body
 
     // 보고 제출
     if (action === 'submit') {
-      const { reporter, report_date, time_slot, rooms, memo } = body
+      const { report_date, time_slot, rooms, memo } = body
+      const reporter = staff.name
       if (!rooms || !rooms.length) return NextResponse.json({ error: 'rooms required' }, { status: 400 })
 
       const { data: inserted, error } = await supabase
@@ -74,11 +80,9 @@ export async function POST(req: Request) {
     if (action === 'update_pending') {
       const { id, status } = body
       if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-      const update: Record<string, unknown> = { status }
-      if (status === 'done') update.resolved_at = new Date().toISOString()
-      else update.resolved_at = null
-
-      const { error } = await supabase.from('house_pending_items').update(update).eq('id', id)
+      const { data: current } = await supabase.from('house_pending_items').select('version').eq('id', id).single()
+      if (!current) return NextResponse.json({ error: '항목을 찾을 수 없습니다.' }, { status: 404 })
+      const { error } = await supabase.rpc('house_issue_write', { p_id: id, p_action: 'status', p_data: { status, content: '일일 보고 화면에서 상태 변경' }, p_author: staff.username, p_name: staff.name, p_version: current.version })
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ ok: true })
     }
@@ -87,7 +91,8 @@ export async function POST(req: Request) {
     if (action === 'delete') {
       const { id } = body
       if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-      await supabase.from('house_pending_items').delete().eq('report_id', id)
+      const { data: linked } = await supabase.from('house_pending_items').select('id').eq('report_id', id)
+      if (linked?.length) return NextResponse.json({ error: '문제 기록에 연결된 보고는 삭제할 수 없습니다. 처리 상태를 변경해주세요.' }, { status: 409 })
       const { error } = await supabase.from('house_reports').delete().eq('id', id)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ ok: true })
