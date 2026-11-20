@@ -231,7 +231,7 @@ const BODY_HTML = `<div class="toolbar">
     <button class="btn ghost" onclick="window.print()">🖨️ Print / PDF</button>
     <button class="btn ghost" onclick="saveImage()" id="imgBtn">🖼️ Save image</button>
     <button class="btn ghost" onclick="resetAll()">↺ Reset</button>
-    <button class="btn primary" onclick="finalizeDay()" id="closeBtn">✓ 마감</button><button class="btn" onclick="reopenDay()" id="reopenBtn" hidden>마감 해제</button><button class="btn" onclick="openVehicles()">차량 스케줄 →</button><span id="closeStatus" role="status"></span><span class="saved" id="savedMsg"></span>
+    <button class="btn primary" onclick="finalizeDay()" id="closeBtn" title="Maries: click Finalize to include this day in the overall vehicle schedule.">✓ Finalize</button><button class="btn" onclick="reopenDay()" id="reopenBtn" hidden>Reopen</button><button class="btn" onclick="openVehicles()">Vehicle schedule →</button><span id="closeStatus" role="status"></span><span class="saved" id="savedMsg"></span>
     <span class="hint">Drag cards to move · click text to edit</span>
   </div>
 
@@ -397,7 +397,7 @@ export default function AshuttlePage() {
       const closed=!!closeInfo?.closedAt;
       document.getElementById('closeBtn').hidden=closed;document.getElementById('closeBtn').disabled=closeBusy;
       document.getElementById('reopenBtn').hidden=!closed;document.getElementById('reopenBtn').disabled=closeBusy;
-      document.getElementById('closeStatus').textContent=closed?'🔒 마감됨 · 차량 스케줄 반영 완료':'작성 중 · 마감 후 차량 스케줄에 반영';
+      document.getElementById('closeStatus').textContent=closed?'🔒 Finalized · Included in the vehicle schedule':'Draft · Maries, please click Finalize to include this day in the overall vehicle schedule.';
       ['board','legend','absent'].forEach(id=>{const el=document.getElementById(id);if(el)el.inert=closed||closeBusy;});
     }
     async function changeClosure(action){
@@ -407,7 +407,7 @@ export default function AshuttlePage() {
       finally{closeBusy=false;updateClosureUI();}
     }
     async function finalizeDay(){if(document.activeElement?.blur)document.activeElement.blur();await changeClosure('close');}
-    async function reopenDay(){if(confirm('마감을 해제하면 차량 스케줄에서 이 통학표가 빠집니다. 수정 후 다시 마감해주세요.'))await changeClosure('reopen');}
+    async function reopenDay(){if(confirm('Reopening removes this day from the overall vehicle schedule. Please finalize again after editing.'))await changeClosure('reopen');}
     function openVehicles(){window.top.location.href='/admin/vehicle-schedule?date='+currentISO;}
     window.finalizeDay=finalizeDay;window.reopenDay=reopenDay;window.openVehicles=openVehicles;
 

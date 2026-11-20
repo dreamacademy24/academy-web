@@ -237,7 +237,7 @@ export default function TeacherWorkspace() {
   }, [ready]);
 
   const canEdit = (n: Node) => n.origin === "teacher";
-  const personName = (id: string) => teachers.find(t => t.id === id)?.name || koreans.find(k => k.id === id)?.name || id;
+  const personName = (id: string) => id === 'system' ? 'dream' : teachers.find(t => t.id === id)?.name || koreans.find(k => k.id === id)?.name || id;
   const personColor = (id: string) => teachers.find(t => t.id === id)?.color || koreans.find(k => k.id === id)?.color || "#94a3b8";
 
   async function createProject() {
@@ -290,7 +290,7 @@ export default function TeacherWorkspace() {
     if (error) { alert("Failed: " + error.message); return; }
     setDraft(""); loadCmts(nodeId);
   }
-  const nameOf = (fromId: string) => (fromId === me?.username ? (me?.name || "Me") : fromId);
+  const nameOf = (fromId: string) => fromId === 'system' ? 'dream' : (fromId === me?.username ? (me?.name || "Me") : fromId);
 
   function openNode(n: Node) {
     if (n.kind === "folder" || n.kind === "project") { setOpenMap(m => ({ ...m, [n.id]: m[n.id] === false })); return; }

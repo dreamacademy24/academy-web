@@ -238,10 +238,10 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
     if (inDate && (AIRPORT.test(b.pickup_place || "") || b.flight_in_date || b.flight_in_time || b.flight_in) && !covered.has(`${b.id}_pickup_${inDate}`) && !covered.has(`${b.id}_pickup_${inOperating}`)) {
       const dest = combo ? accomLabel(b.seg1_type, room) : (room || accomFromType(b.accom_type) || "숙소");
       out.push({
-        id: `bk_in_${b.id}`, date: inOperating, time: "", sortTime: "99:99",
+        id: `bk_in_${b.id}`, date: inOperating, time: inTime || "", sortTime: to24h(inTime),
         kind: "pickup", source: "bookings", guest, location: "공항", destination: dest,
         num_people: people, flight_info: fmtFlight(b.flight_in_airline, b.flight_in_no, b.flight_in),
-        locked: true, auto: true, note: `예약 기반 초안 · ${airportFlightNote(inDate,inTime,'도착')} · 차량 시간 확인 필요`,
+        locked: true, auto: true, note: `예약 기반 · ${airportFlightNote(inDate,inTime,'도착')} · 표시 시간은 공항 도착시간`,
       });
     }
     // 콤보 환승 (숙소1 → 숙소2)
@@ -286,14 +286,22 @@ export function pickupMovements(rows: RawPickup[]): VehMovement[] {
     const kind = PICKUP_KIND[p.request_type] || "extra";
     const guest = p.bookings?.booker_name || p.guest_name || "-";
     const room = p.bookings?.house_no || p.bookings?.accom_room || "";
+    const requestDate=String(p.request_date || '').slice(0,10);
+    const airportRun=kind==='pickup'||kind==='dropoff'||(/공항|airport|mcia/i.test([p.location,p.destination].join(' ')))||/\b[A-Z0-9]{2}\s?\d{3,4}\b/i.test([p.flight_info,p.notes].join(' '));
+    const direction=kind==='dropoff'||p.request_type==='extra_drop'?'출발':'도착';
+    const flightDate=p.notes?.match(/다음 날 (\d{4}-\d{2}-\d{2})/)?.[1]||p.flight_info?.match(/\b(\d{4}-\d{2}-\d{2})\b/)?.[1]||requestDate;
+    const flightTime=p.flight_info?.match(/\b(\d{1,2}:\d{2})\b/)?.[1]||p.request_time||'';
+    const explicitOperating=p.notes?.match(/\[야간 운영일 (\d{4}-\d{2}-\d{2})\]/)?.[1];
+    const operatingDate=airportRun?(explicitOperating||airportOperatingDate(flightDate,flightTime)):requestDate;
+    const displayTime=p.request_time||flightTime;
     return {
       id: `pk_${p.id}`,
       booking_id: p.booking_id,
       request_status: p.status,
-      note: p.notes || '',
-      date: String(p.request_date || "").slice(0, 10),
-      time: p.request_time || "",
-      sortTime: to24h(p.request_time),
+      note: [p.notes,airportRun?airportFlightNote(flightDate,flightTime,direction):''].filter(Boolean).join(' · '),
+      date: operatingDate,
+      time: displayTime,
+      sortTime: to24h(displayTime),
       kind,
       source: "pickup_requests" as VehSource,
       guest,

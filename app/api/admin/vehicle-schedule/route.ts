@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getStaffIdentity, portalDb } from '@/lib/portalAuth';
+import { pickupMovements, type RawPickup } from '@/lib/vehicleSchedule';
 export const dynamic = 'force-dynamic';
 const reply=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':'private, no-store'}});
 const validDate=(d:unknown):d is string=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d;
@@ -56,6 +57,12 @@ export async function GET(req:Request){
    const state=overrides[String(p.request_date)];
    const ov=state?.overrides?.[`pk_${p.id}`];
    if(ov){ov.driver_id=p.driver_id??null;ov.time=p.request_time||'';ov.note=p.notes||'';}
+   const operating=pickupMovements([p as unknown as RawPickup])[0]?.date;
+   if(operating&&operating!==p.request_date&&ov){
+    const target=overrides[operating] ||= {};
+    target.overrides ||= {};
+    target.overrides[`pk_${p.id}`] ||= ov;
+   }
   }
   for(const s of shuttles){const ov=overrides[String(s.tour_date)]?.overrides?.[`sh_${s.id}`];if(ov)ov.driver_id=s.driver_id??null;}
   return reply({pickups:pickups.map(p=>({...p,bookings:bMap.get(p.booking_id)||null})),bookings,
@@ -87,8 +94,16 @@ export async function POST(req:Request){
    const state={...(existing?.value||{}),overrides:{...(existing?.value?.overrides||{}),[id]:{driver_id:driver,time,note:value.note,vehicle_name:value.vehicle_name?.trim()||'',teacher_name:value.teacher_name?.trim()||''}},updated_by:staff.name,updated_at:new Date().toISOString()};
    const table=id.startsWith('pk_')?'pickup_requests':id.startsWith('sh_')?'shuttle_applications':null;
    if(table){
-    const fields=table==='pickup_requests'?{driver_id:driver,request_time:time||null,notes:value.note}:{driver_id:driver};
-    const {data,error}=await db.from(table).update(fields).eq('id',id.slice(3)).eq(table==='pickup_requests'?'request_date':'tour_date',body.date).select('id');
+    let sourceDate=body.date;
+    if(table==='pickup_requests'){
+     const {data:source,error:sourceError}=await db.from(table).select('*').eq('id',id.slice(3)).maybeSingle();
+     if(sourceError)throw sourceError;
+     if(!source||pickupMovements([source as RawPickup])[0]?.date!==body.date)return reply({error:'원본 일정이 변경되었습니다. 새로고침 후 확인해주세요.'},409);
+     sourceDate=source.request_date;
+    }
+    const note=table==='pickup_requests'&&sourceDate!==body.date&&!value.note.includes('[야간 운영일 ')?`[야간 운영일 ${body.date}] ${value.note}`:value.note;
+    const fields=table==='pickup_requests'?{driver_id:driver,request_time:time||null,notes:note}:{driver_id:driver};
+    const {data,error}=await db.from(table).update(fields).eq('id',id.slice(3)).eq(table==='pickup_requests'?'request_date':'tour_date',sourceDate).select('id');
     if(error)throw error;if(!data?.length)return reply({error:'원본 일정이 변경되었습니다. 새로고침 후 확인해주세요.'},409);
    }
    const {error}=await db.from('app_settings').upsert({key:keyOf(body.date),value:state,updated_at:state.updated_at},{onConflict:'key'});
