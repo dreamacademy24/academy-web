@@ -185,6 +185,7 @@ export default function CheckinFormPage() {
         }
         const d = await res.json();
         const det = d.detail;
+        if (det.booking_id) setBookingId(det.booking_id);
         if (det.submitted_at) {
           setSubmitted(true);
           setLoading(false);
