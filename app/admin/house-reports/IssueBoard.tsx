@@ -14,14 +14,14 @@ async function compress(file:File):Promise<Photo>{
  if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>10*1024*1024)throw Error('사진은 JPEG·PNG·WebP, 한 장당 10MB 이내로 선택해주세요.');
  const image=await createImageBitmap(file);const ratio=Math.min(1,1400/Math.max(image.width,image.height));const canvas=document.createElement('canvas');canvas.width=Math.round(image.width*ratio);canvas.height=Math.round(image.height*ratio);canvas.getContext('2d')!.drawImage(image,0,0,canvas.width,canvas.height);image.close();const data=canvas.toDataURL('image/jpeg',.78);return {name:file.name.replace(/\.[^.]+$/,'.jpg'),type:'image/jpeg',data,size:Math.floor(data.length*.75)};
 }
-export default function IssueBoard({onDaily}:{onDaily:()=>void}){
+export default function IssueBoard({onDaily,active=true}:{onDaily:()=>void;active?:boolean}){
  const [items,setItems]=useState<Issue[]>([]),[people,setPeople]=useState<Person[]>([]),[viewer,setViewer]=useState(''),[viewerId,setViewerId]=useState('');
  const [tab,setTab]=useState('open'),[place,setPlace]=useState(''),[sort,setSort]=useState('due'),[search,setSearch]=useState('');
  const [selected,setSelected]=useState<Issue|null>(null),[events,setEvents]=useState<Event[]>([]),[source,setSource]=useState<{reporter:string;date:string;files:Photo[]}|null>(null);
  const [create,setCreate]=useState(false),[form,setForm]=useState(blank),[files,setFiles]=useState<Photo[]>([]),[comment,setComment]=useState(''),[progress,setProgress]=useState(''),[status,setStatus]=useState('problem');
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[needLogin,setNeedLogin]=useState(false);
  const load=useCallback(async()=>{try{const r=await fetch('/api/house-issues',{cache:'no-store'});const d=await r.json();if(!r.ok){setNeedLogin(r.status===401);throw Error(d.error);}setItems(d.items);setPeople(d.people);setViewer(d.viewer);setViewerId(d.viewerId);setNeedLogin(false);}catch(e){setError((e as Error).message);}finally{setLoading(false);}},[]);
- useEffect(()=>{load();},[load]);
+ useEffect(()=>{if(active)load();},[load,active]);
  const open=async(id:string)=>{setBusy(true);setError('');try{const r=await fetch('/api/house-issues?id='+id,{cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.error);setSelected(d.issue);setEvents(d.events);setSource(d.source);setForm({room_no:d.issue.room_no,content:d.issue.content,assignee:d.issue.assignee||'',next_action:d.issue.next_action||'',next_check:d.issue.next_check||''});setStatus(d.issue.status);setComment('');setProgress('');setFiles([]);setCreate(false);window.scrollTo({top:0});}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
  const draftKey='house-issue-draft-v1:'+viewerId;
  const newIssue=()=>{let draft=blank;try{draft=JSON.parse(localStorage.getItem(draftKey)||'null')||blank;}catch{}setForm(draft);setFiles([]);setSelected(null);setCreate(true);setError('');setNotice('');window.scrollTo({top:0});};

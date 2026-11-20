@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { toastOk, toastErr } from "@/lib/toast";
-import { useRouter } from "next/navigation";
+
 import { isAdminAuthed } from "@/lib/adminAuth";
 
 /* ──── Types ──── */
@@ -43,10 +43,10 @@ function addDays(s: string, n: number) { const d = new Date(s); d.setDate(d.getD
 function defaultTimeSlot() { const h = new Date().getHours(); if (h < 12) return "morning"; if (h < 18) return "afternoon"; return "checkin"; }
 
 /* ──── Component ──── */
-export default function HouseReportsPage() {
-  const router = useRouter();
+export default function HouseReportsPage({mode, onModeChange, onIssues, active}: {active:boolean;mode: "view" | "write"; onModeChange: (mode: "view" | "write") => void; onIssues: () => void}) {
+
   const [authed, setAuthed] = useState(false);
-  const [mainTab, setMainTab] = useState<"view" | "write">("view");
+  const mainTab = mode; const setMainTab = onModeChange;
 
   // --- View tab state ---
   const [reports, setReports] = useState<Report[]>([]);
@@ -97,7 +97,7 @@ export default function HouseReportsPage() {
     if (res.ok) { const d = await res.json(); setReports(d.reports || []); }
   }, [authed, dateFrom, dateTo, slot]);
 
-  useEffect(() => { loadReports(); }, [loadReports]);
+  useEffect(() => { if(active)loadReports(); }, [loadReports,active]);
 
   useEffect(() => {
     const t = todayStr();
@@ -126,9 +126,10 @@ export default function HouseReportsPage() {
   }, [authed]);
 
   useEffect(() => {
+    if (!active) return;
     if (mainTab === "write") { loadPending(); loadHistory(); }
     if (mainTab === "view") { loadPending(); }
-  }, [mainTab, loadPending, loadHistory]);
+  }, [mainTab, loadPending, loadHistory,active]);
 
   /* ──── View: helpers ──── */
   function setDateRange(type: "today" | "yesterday" | "week") {
@@ -353,7 +354,7 @@ export default function HouseReportsPage() {
 
   return (<>
     <style>{`
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f9fafb;color:#111827}
+.hr-w{font-family:inherit;color:#243046}
 .hr-w{max-width:900px;margin:0 auto;padding:28px 20px}
 .hr-top{display:flex;align-items:center;gap:12px;margin-bottom:20px}
 .hr-back{background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px;border-radius:8px}.hr-back:hover{background:#e5e7eb}
@@ -421,11 +422,11 @@ export default function HouseReportsPage() {
     `}</style>
     <div className="hr-w">
       <div className="hr-top">
-        <button className="hr-back" onClick={() => router.push("/admin/hub")}>←</button>
+        <button className="hr-back" onClick={() => onModeChange("view")}>←</button>
         <h1>🏠 일일 보고</h1>
       </div>
 
-      <p style={{fontSize:13,color:"#6b7280",marginBottom:16}}>일일 보고는 작성 당시의 기록입니다. 최신 처리 상태와 댓글은 미해결 문제 관리에서 확인하세요.</p>
+      <p style={{fontSize:13,color:"#6b7280",marginBottom:16}}>일일 보고는 작성 당시의 기록입니다. 최신 처리 상태와 댓글은 하우스 문제 관리에서 확인하세요. <button type="button" className="house-return" onClick={onIssues}>하우스 문제 관리 →</button></p>
       {/* ──── Tab Row ──── */}
       <div className="tabs">
         {([
