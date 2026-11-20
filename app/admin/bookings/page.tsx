@@ -464,7 +464,7 @@ export default function AdminBookingsPage(){
   async function createFlightCheckTasks(){
     const today=new Date();today.setHours(0,0,0,0);
     const targets=confirmList.filter(b=>{
-      if(!b.checkin_date)return false;
+      if(isCancelledBooking(b)||!b.checkin_date)return false;
       const ci=new Date(b.checkin_date);ci.setHours(0,0,0,0);
       const diff=Math.round((ci.getTime()-today.getTime())/(1000*60*60*24));
       return diff>=25&&diff<=35;
@@ -1271,13 +1271,13 @@ export default function AdminBookingsPage(){
         {/* STEP 24: 통계 바 */}
         <div style={{display:"flex",gap:12,marginBottom:12,flexWrap:"wrap"}}>
           <div style={{padding:"8px 16px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0",fontSize:12}}>
-            <span style={{color:"#6b7c93"}}>전체 확정</span> <span style={{fontWeight:800,color:"#1a1a2e",marginLeft:4}}>{confirmList.length}건</span>
+            <span style={{color:"#6b7c93"}}>전체 확정</span> <span style={{fontWeight:800,color:"#1a1a2e",marginLeft:4}}>{confirmList.filter(b=>!isCancelledBooking(b)).length}건</span>
           </div>
           <div style={{padding:"8px 16px",background:"#f0fdf4",borderRadius:8,border:"1px solid #bbf7d0",fontSize:12}}>
-            <span style={{color:"#166534"}}>예약금 완료</span> <span style={{fontWeight:800,color:"#166534",marginLeft:4}}>{confirmList.filter(b=>b.balance_date&&b.balance_date.includes("완료")).length}건</span>
+            <span style={{color:"#166534"}}>예약금 완료</span> <span style={{fontWeight:800,color:"#166534",marginLeft:4}}>{confirmList.filter(b=>!isCancelledBooking(b)&&b.balance_date&&b.balance_date.includes("완료")).length}건</span>
           </div>
           <div style={{padding:"8px 16px",background:"#fefce8",borderRadius:8,border:"1px solid #fde68a",fontSize:12}}>
-            <span style={{color:"#854d0e"}}>미입금</span> <span style={{fontWeight:800,color:"#854d0e",marginLeft:4}}>{confirmList.filter(b=>!b.balance_date||!b.balance_date.includes("완료")).length}건</span>
+            <span style={{color:"#854d0e"}}>미입금</span> <span style={{fontWeight:800,color:"#854d0e",marginLeft:4}}>{confirmList.filter(b=>!isCancelledBooking(b)&&(!b.balance_date||!b.balance_date.includes("완료"))).length}건</span>
           </div>
           <button onClick={createFlightCheckTasks} style={{marginLeft:"auto",padding:"8px 16px",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>🔔 알림 태스크 생성</button>
         </div>
