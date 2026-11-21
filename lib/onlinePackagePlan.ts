@@ -51,7 +51,7 @@ export function validatePackagePlan(value:unknown,bookings:PackageBooking[],admi
   for(const key of ['pre','post'] as const){const v=p[key];if(!v||!Number.isSafeInteger(v.count)||v.count<0)throw Error('연수 전·후 회차를 0 이상의 정수로 입력해주세요.');
     if(v.count===0){parts[key]={count:0,start:'',days:[],times:{}};continue;}
     if(!validDate(v.start)||v.start<'2020-01-01'||v.start>'2035-12-31')throw Error(`${key==='pre'?'연수 전':'연수 후'} 시작일을 확인해주세요.`);
-    if(!Array.isArray(v.days)||![2,3,5].includes(v.days.length)||new Set(v.days).size!==v.days.length||v.days.some(d=>!BOOKING3_DAYS.includes(d)))throw Error('각 일정은 평일 중 주 2·3·5회로 선택해주세요. 총 제공 회차는 요일 수와 관계없이 유지됩니다.');
+    if(!Array.isArray(v.days)||![2,3].includes(v.days.length)||new Set(v.days).size!==v.days.length||v.days.some(d=>!BOOKING3_DAYS.includes(d)))throw Error('연수 패키지 화상영어는 주 최대 3회입니다. 주 2회 또는 3회로 선택해주세요.');
     const times:Record<string,string>={};for(const d of v.days){if(!BOOKING3_TIMES.includes(v.times?.[d]))throw Error('수업 시간은 한국 14:00~21:30 중 선택해주세요.');times[d]=v.times[d];}
     parts[key]={count:v.count,start:v.start,days:BOOKING3_DAYS.filter(d=>v.days.includes(d)),times};
   }
