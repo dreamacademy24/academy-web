@@ -49,7 +49,7 @@ const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }>
   makeup:     { label: "보강",   bg: "#fef9c3", color: "#92400e" },
 };
 
-const WEEKDAY_HEADS = ["일", "월", "화", "수", "목", "금", "토"];
+const WEEKDAY_HEADS = ["월", "화", "수", "목", "금"];
 const MONTHS_KR = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
 
 function pad2(n: number) { return n < 10 ? "0" + n : "" + n }
@@ -257,7 +257,7 @@ function PortalOnlineClassInner() {
       cells.push({ date: dt, dateStr: localStr(dt) });
     }
     while (cells.length % 7 !== 0) cells.push({ date: null, dateStr: null });
-    return cells;
+    return cells.filter((_, index) => index % 7 !== 0 && index % 7 !== 6);
   }, [calMonth]);
 
   function shiftMonth(delta: number) {
@@ -343,11 +343,11 @@ function PortalOnlineClassInner() {
 .cal-nav{display:flex;gap:6px;flex-shrink:0}
 .cal-nav button{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:36px;padding:4px 9px;white-space:nowrap;border:1px solid #e2e8f0;background:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:13px;line-height:1.25}
 .cal-nav button:hover{background:#f1f5f9}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;width:100%;min-width:0}
 .cal-wd{text-align:center;font-size:11px;font-weight:700;color:#6b7c93;padding:4px 0}
 .cal-wd.sun{color:#dc2626}
 .cal-wd.sat{color:#1d4ed8}
-.cal-cell{aspect-ratio:1/1;border-radius:8px;padding:4px;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;border:1px solid transparent;position:relative}
+.cal-cell{min-width:0;min-height:56px;box-sizing:border-box;aspect-ratio:1/1;border-radius:8px;padding:4px;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;border:1px solid transparent;position:relative}
 .cal-cell.empty{visibility:hidden}
 .cal-cell.today{border-color:#1a6fc4;background:#eff6ff}
 .cal-cell .d{font-weight:600;color:#1a1a2e}
@@ -510,8 +510,8 @@ function PortalOnlineClassInner() {
               </div>
             </div>
             <div className="cal-grid">
-              {WEEKDAY_HEADS.map((w, i) => (
-                <div key={w} className={`cal-wd ${i === 0 ? "sun" : i === 6 ? "sat" : ""}`}>{w}</div>
+              {WEEKDAY_HEADS.map((w) => (
+                <div key={w} className="cal-wd">{w}</div>
               ))}
               {calendarCells.map((c, idx) => {
                 if (!c.date || !c.dateStr) return <div key={idx} className="cal-cell empty" />;
