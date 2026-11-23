@@ -157,12 +157,9 @@ export default function PortalShuttlePage() {
     document.querySelectorAll(".schedule-item").forEach((item) => {
       const checkbox = item.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
       if (!checkbox) return;
-      const val = checkbox.value;
-      const parts = val.split("-");
-      if (parts.length < 2) return;
-      const month = parseInt(parts[0], 10);
-      const day = parseInt(parts[1], 10);
-      const scheduleDate = new Date(pht.getFullYear(), month - 1, day);
+      const dateStr = checkbox.dataset.date;
+      if (!dateStr) return;
+      const scheduleDate = new Date(dateStr + 'T00:00:00');
       const scheduleDow = scheduleDate.getDay();
 
       // 마감 = 탑승 전날 세부 16:30. 단 토·일·월은 직전 금요일 16:30로 통합 (주말 인력 미운영)

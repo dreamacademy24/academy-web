@@ -79,12 +79,9 @@ export default function ShuttlePage() {
     document.querySelectorAll(".schedule-item").forEach((item) => {
       const checkbox = item.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
       if (!checkbox) return;
-      const val = checkbox.value;
-      const parts = val.split("-");
-      if (parts.length < 2) return;
-      const month = parseInt(parts[0], 10);
-      const day = parseInt(parts[1], 10);
-      const scheduleDate = new Date(pht.getFullYear(), month - 1, day);
+      const dateStr = checkbox.dataset.date;
+      if (!dateStr) return;
+      const scheduleDate = new Date(dateStr + 'T00:00:00');
       const scheduleDow = scheduleDate.getDay();
 
       // 마감 = 탑승 전날 세부 16:30. 단 토·일·월은 직전 금요일 16:30로 통합 (주말 인력 미운영)
@@ -473,7 +470,7 @@ export default function ShuttlePage() {
                                 const isWeekend = item.dayLabel.includes('(토)') || item.dayLabel.includes('(일)');
                                 return item.slots.map((sl, si) => (
                                   <label key={`${item.dateStr}-${si}`} className={`schedule-item${isWeekend ? ' weekend' : ''}`}>
-                                    <input type="checkbox" name="schedule" value={`${m}-${d}-${si}-${slotSlug(sl.name)}`} />
+                                    <input type="checkbox" name="schedule" data-date={item.dateStr} value={`${m}-${d}-${si}-${slotSlug(sl.name)}`} />
                                     <div className="schedule-label">
                                       <span className="schedule-main">{item.dayLabel} · {sl.name}</span>
                                       <span className="schedule-sub">출발 {sl.time} · 복귀 {sl.return}</span>
