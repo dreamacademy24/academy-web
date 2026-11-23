@@ -29,6 +29,7 @@ interface Booking {
 
 const isCancelledBooking=(b:Booking)=>/취소|cancelled|canceled/i.test(b.status||'');
 const paidCancellation=(b:Booking)=>isCancelledBooking(b)&&Number(b.paid_amount)>0;
+const excludedDepositCancellation=(b:Booking)=>isCancelledBooking(b)&&Number(b.paid_amount)===500000;
 const cancelBadge=(b:Booking)=>paidCancellation(b)?<strong className="cancel-label">취소</strong>:null;
 
 const SC:Record<string,{bg:string;color:string}>={
@@ -809,6 +810,7 @@ export default function AdminBookingsPage(){
   const searchedList=filtered.filter(b=>!!listSearch.trim()||!checkinMonth||(checkinMonth==="undated"?!b.checkin_date:String(b.checkin_date||"").slice(0,7)===checkinMonth)).filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.checkin_date||"9999").localeCompare(String(y.checkin_date||"9999"))||String(x.reservation_no||"").localeCompare(String(y.reservation_no||"")));
   const pastCount=statusFiltered.filter(b=>isPast(b)).length;
   const rcpList=bookings.filter(b=>{
+    if(excludedDepositCancellation(b))return false;
     const q=receiptSearch.trim().toLowerCase();
     if(q&&![b.booker_name,b.reservation_no,stuNames(b.students)].some(v=>String(v||'').toLowerCase().includes(q)))return false;
     if(!receiptSearch.trim() && receiptMonth && (receiptMonth==="undated"?!!balanceDateOf(b):balanceDateOf(b).slice(0,7)!==receiptMonth))return false;
@@ -819,7 +821,7 @@ export default function AdminBookingsPage(){
     if(!receiptSearch.trim()&&co&&co<_todayStr)return false;
     return true;
   });
-  const confirmList=bookings.filter(b=>["영수증발행","결제완료","완료"].includes(b.status)||paidCancellation(b));
+  const confirmList=bookings.filter(b=>!excludedDepositCancellation(b)&&(["영수증발행","결제완료","완료"].includes(b.status)||paidCancellation(b)));
   const confirmFiltered=confirmFilter==="전체"?confirmList:confirmList.filter(b=>b.status===confirmFilter);
 
   function getDday(dateStr?:string){
