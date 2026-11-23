@@ -49,6 +49,7 @@ export async function POST(req:Request) {
   }else{try{payload=await req.json();}catch{throw new ExpenseHttpError(400,'입력 형식이 올바르지 않습니다.');}}
   if(files.length>2||files.some(f=>f.size<=0||f.size>1572864)||files.reduce((s,f)=>s+f.size,0)>3145728)throw new ExpenseHttpError(413,'영수증은 1.5MB 이하 두 장까지 첨부하세요.');
   const input=normalizeExpenseInput(payload,files.length),db=portalDb();
+  if(access.staff.username==='admin-bella'&&input.unit!=='dreamhouse')throw new ExpenseHttpError(403,'벨라는 드림하우스 장부만 작성할 수 있습니다.');
   const prepared=await Promise.all(files.map(async f=>{const bytes=new Uint8Array(await f.arrayBuffer()),mime=receiptMime(bytes);if(!mime)throw new ExpenseHttpError(400,'JPG·PNG·WEBP 사진만 첨부할 수 있습니다.');return{bytes,mime,sha256:createHash('sha256').update(bytes).digest('hex')};}));
   const fingerprint=createHash('sha256').update(JSON.stringify({input,receipts:prepared.map(r=>({sha256:r.sha256,mime:r.mime})).sort((a,b)=>a.sha256.localeCompare(b.sha256))})).digest('hex');
   const prior=await db.from('expense_claims').select(CLAIM_FIELDS+',payload_sha256').eq('submitted_by',access.staff.id).eq('idempotency_key',input.idempotency_key).maybeSingle();ensureDatabase(prior.error);

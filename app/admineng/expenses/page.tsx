@@ -1,5 +1,5 @@
-import ExpenseClaimsClient from '../../../components/expenses/ExpenseClaimsClient';
+import ExpenseBookClient from '../../../components/expenses/ExpenseBookClient';
 
 export default function ExpensesPage(){
-  return <ExpenseClaimsClient/>;
+  return <ExpenseBookClient/>;
 }
