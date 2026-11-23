@@ -111,6 +111,8 @@ export default function OnlineClassPage() {
   const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<"list" | "register" | "requests" | "targets" | "weekly" | "applications">("targets");
   useEffect(() => { if (new URLSearchParams(window.location.search).get('tab') === 'applications') setTab('applications'); }, []);
+  const [applicationCount,setApplicationCount]=useState(0);
+  useEffect(()=>{let active=true;const refresh=async()=>{try{const rows=await Promise.all(['/api/online-class/applications','/api/admin/booking3'].map(async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('load');return (await r.json()).applications||[];}));if(active)setApplicationCount(rows[0].length+rows[1].filter((p:any)=>!['issued','rejected'].includes(p.status)).length);}catch{}};void refresh();const timer=setInterval(refresh,30000);window.addEventListener('focus',refresh);return()=>{active=false;clearInterval(timer);window.removeEventListener('focus',refresh);};},[]);
   const [targets, setTargets] = useState<any[]>([]);
   const [tgQ, setTgQ] = useState("");
   const [tgShowExcluded, setTgShowExcluded] = useState(false);
@@ -642,7 +644,7 @@ export default function OnlineClassPage() {
       </div>
 
       <div className="tabs">
-        <button className={`tab${tab === "applications" ? " ac" : ""}`} onClick={() => setTab("applications")}>📝 화상영어 신청서</button>
+        <button className={`tab${tab === "applications" ? " ac" : ""}`} onClick={() => setTab("applications")}>{applicationCount>0&&<span aria-label={`처리할 화상영어 신청 ${applicationCount}건`} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:20,height:20,padding:"0 5px",marginRight:6,borderRadius:10,background:"#dc4f4b",color:"#fff",fontSize:12,fontWeight:800}}>{applicationCount}</span>}📝 화상영어 신청서</button>
         <button className={`tab${tab === "targets" ? " ac" : ""}`} onClick={() => setTab("targets")}>🎯 대상 목록</button>
         <button className={`tab${tab === "list" ? " ac" : ""}`} onClick={() => setTab("list")}>📋 수강생 목록</button>
         <button className={`tab${tab === "register" ? " ac" : ""}`} onClick={() => setTab("register")}>➕ 수강 등록</button>
@@ -658,7 +660,7 @@ export default function OnlineClassPage() {
         <button className="tab" onClick={() => router.push("/admin/online-class/availability")}>📊 가용 현황</button>
       </div>
 
-      {tab === 'applications' && <><OnlineApplicationInbox onApproved={id=>setConfirmedIds(prev=>new Set([...prev,id]))} /></>}
+      {tab === 'applications' && <><OnlineApplicationInbox onCountChanged={setApplicationCount} onApproved={id=>setConfirmedIds(prev=>new Set([...prev,id]))} /></>}
       {/* ═══ TAB 1: 수강생 목록 ═══ */}
       {tab === "list" && <>
         <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
