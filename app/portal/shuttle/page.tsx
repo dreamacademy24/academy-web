@@ -320,7 +320,7 @@ export default function PortalShuttlePage() {
       .chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px; background: var(--accent-soft); color: #1d4ed8; font-size: 11px; font-weight: 600; }
       .notice { margin: 0 0 14px; font-size: 13px; color: var(--muted); line-height: 1.5; }
       .notice strong { color: #4b5563; }
-      form { display: grid; gap: 14px; }
+      form { display: grid; grid-template-columns: minmax(0,1fr); min-width: 0; gap: 14px; }
       .field { display: grid; gap: 6px; }
       .field-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
       label span.required { color: var(--danger); margin-left: 2px; }
@@ -339,7 +339,7 @@ export default function PortalShuttlePage() {
       .agree { margin-top: 2px; display: flex; gap: 8px; font-size: 12px; color: #4b5563; align-items: flex-start; }
       .agree input[type="checkbox"] { margin-top: 2px; width: 14px; height: 14px; }
       .month-toggle { margin-top: 8px; display: inline-flex; padding: 3px; border-radius: 999px; background: #f3f4f6; gap: 3px; }
-      .month-toggle button { border: none; background: transparent; padding: 5px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #6b7280; cursor: pointer; transition: background 120ms, color 120ms, box-shadow 120ms, transform 120ms; font-family: inherit; }
+      .month-toggle { max-width: 100%; overflow-x: auto; } .month-toggle button { flex-shrink: 0; border: none; background: transparent; padding: 5px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #6b7280; cursor: pointer; transition: background 120ms, color 120ms, box-shadow 120ms, transform 120ms; font-family: inherit; }
       .month-toggle button[data-active="true"] { background: #fff; color: #1f2937; box-shadow: 0 8px 18px rgba(15,23,42,0.12); transform: translateY(-0.5px); }
       .month-panel { display: none; }
       .month-panel[data-visible="true"] { display: block; }
@@ -740,3 +740,4 @@ export default function PortalShuttlePage() {
     </>
   );
 }
+
