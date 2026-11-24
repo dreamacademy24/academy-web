@@ -472,7 +472,8 @@ export default function ShuttlePage() {
                                   <label key={`${item.dateStr}-${si}`} className={`schedule-item${isWeekend ? ' weekend' : ''}`}>
                                     <input type="checkbox" name="schedule" data-date={item.dateStr} value={`${m}-${d}-${si}-${slotSlug(sl.name)}`} />
                                     <div className="schedule-label">
-                                      <span className="schedule-main">{item.dayLabel} · {sl.name}</span>
+                                      <span className="schedule-main">{item.dayLabel} · {sl.displayName || sl.name}</span>
+                                      {sl.route && <span className="schedule-sub" style={{whiteSpace:'normal'}}>신청: {sl.name} · 고정 노선 · 필리핀 시간<br />{sl.route}</span>}
                                       <span className="schedule-sub">출발 {sl.time} · 복귀 {sl.return}</span>
                                       {sl.note && <span style={{color:'#dc2626', fontSize:11, fontWeight:600, marginTop:2}}>❗ {sl.note}</span>}
                                     </div>

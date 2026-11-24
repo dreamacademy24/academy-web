@@ -3,6 +3,7 @@ import { weekendPark } from '@/lib/shuttleTours';
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { toastErr } from "@/lib/toast";
 import { createClient } from "@supabase/supabase-js";
+import { routeDescription, readRouteDescription } from '@/lib/shuttleRoute';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -66,7 +67,7 @@ export function generateItems(month: string): Omit<ScheduleItem, "id" | "created
         type: "shuttle",
         date: ds,
         title: HMART_TITLE,
-        description: HMART_DESC,
+        description: routeDescription(ds),
         is_deployed: false,
         deploy_month: month,
       });
@@ -353,7 +354,8 @@ export default function ScheduleDeploy() {
                     const bg = it.is_deployed ? "#dcfce7" : "#dbeafe";
                     const fg = it.is_deployed ? "#15803d" : "#1e40af";
                     const time = (it.description || "").split("-")[0].trim();
-                    const shortTitle = it.title.length > 9 ? it.title.slice(0, 9) + "…" : it.title;
+                      const routeName = readRouteDescription(it.description || '').displayName || it.title;
+                      const shortTitle = routeName.length > 9 ? routeName.slice(0, 9) + "…" : routeName;
                     return (
                       <button
                         key={it.id}
@@ -465,8 +467,9 @@ export default function ScheduleDeploy() {
               onChange={e => setEditTitle(e.target.value)}
               style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",marginBottom:12,outline:"none"}}
             />
-            <label style={{display:"block",fontSize:11.5,fontWeight:700,color:"#475569",marginBottom:5}}>시간 (description, 예: 10:00am)</label>
-            <input
+            <label style={{display:"block",fontSize:11.5,fontWeight:700,color:"#475569",marginBottom:5}}>출발·복귀 및 노선 안내</label>
+            <p style={{fontSize:12,color:'#475569'}}>첫 줄은 출발·복귀, 다음 줄은 ‘노선명: 뉴타운’, ‘노선: 시간 장소 → 시간 장소’로 입력하세요. H마트 신청 연결은 기존 항목 이름을 유지해야 합니다. 배포된 일정은 저장 즉시 반영됩니다.</p>
+            <textarea rows={6}
               value={editDesc}
               onChange={e => setEditDesc(e.target.value)}
               placeholder="10:00am 또는 10:00am - 추가 설명"

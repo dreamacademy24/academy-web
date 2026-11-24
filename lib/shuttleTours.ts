@@ -18,7 +18,8 @@ export const SHUTTLE_SPECIAL_MSG: Record<string,string> = {
   '2027-01-17': '시눌룩 축제로 인한 도로 통제로 투어셔틀 운영 불가',
 };
 
-export interface ShSlot { time: string; name: string; return: string; note?: string; }
+import { defaultHmartRoute } from './shuttleRoute';
+export interface ShSlot { time: string; name: string; return: string; note?: string; displayName?: string; route?: string; }
 
 export function shuttleMonthKeys(first: string, last: string): string[] {
   const result: string[] = [];
@@ -53,7 +54,7 @@ export function getShSlots(dateStr: string, extraHolidays?: Set<string>): ShSlot
   const S_PAROLA   = { time:'4:40pm',  return:'식사 후',         note:'별도 출발시간 없음' };
   const S_SMSEASIDE= { time:'10:30am', return:'-',               note:'개별 복귀' };
 
-  const hmart: ShSlot[] = [{ name:'H-Mart 쇼핑', ...S_HMART }];
+  const hmart: ShSlot[] = [{ name:'H-Mart 쇼핑', ...S_HMART, ...defaultHmartRoute(dateStr) }];
   if (dow===1||dow===3||dow===5) return hmart;
   if (dow===2) return odd
     ? [{ name:'파롤라 (Parola)',       ...S_PAROLA }]

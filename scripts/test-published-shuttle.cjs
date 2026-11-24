@@ -36,3 +36,14 @@ for (const date of ['2027-01-16', '2027-01-17']) {
 assert.notEqual(getShSlots('2027-01-15'), 'holiday');
 assert.notEqual(getShSlots('2027-01-18'), 'holiday');
 console.log('20 published shuttle regression checks passed');
+const {routeDescription}=load('lib/shuttleRoute.ts');
+for(const date of ['2026-12-02','2026-12-04','2026-12-07']){
+ const s=slots(date,[{id:'route',date,title:'H-Mart 쇼핑',description:routeDescription(date)}],new Set())[0];
+ assert.equal(s.name,'H-Mart 쇼핑','application key stays stable');
+ assert.equal(s.displayName,'뉴타운');assert.equal(s.time,'09:30am');assert.equal(s.return,'드림센터');
+ assert.match(s.route,date==='2026-12-02'?/11:10 NUU카페/:/09:50 뉴타운 버스정류장/);
+}
+assert.equal(getShSlots('2026-11-27')[0].time,'10:00am');
+assert.equal(getShSlots('2027-04-02')[0].displayName,'뉴타운');
+assert.equal(slots('2026-12-02',[{id:'edit',date:'2026-12-02',title:'H-Mart 쇼핑',description:'출발 09:45 · 복귀 드림센터\n노선명: 수정 노선\n노선: 09:45 출발 → 정차'}],new Set())[0].time,'09:45');
+console.log('Route display, exact times, historical dates, future templates and stable request key checks passed');

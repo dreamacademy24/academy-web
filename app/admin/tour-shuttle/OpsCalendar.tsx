@@ -81,6 +81,7 @@ interface TourGroup {
   key: string;
   date: string;
   title: string;
+  displayName?: string;
   time: string;
   ret: string;
   note: string;
@@ -164,7 +165,7 @@ export default function OpsCalendar({ mode = "edit" }: { mode?: "final" | "edit"
       if (slots === "holiday") { holi.add(ds); continue; }
       for (const sl of slots) {
         const key = mk(ds, sl.name);
-        map.set(key, { key, date: ds, title: sl.name, time: sl.time, ret: sl.return, note: sl.note || "", isPattern: true, active: [], cancelReq: [], cancelled: [], people: 0 });
+        map.set(key, { key, date: ds, title: sl.name, displayName: sl.displayName, time: sl.time, ret: sl.return, note: [sl.route,sl.note].filter(Boolean).join(' · '), isPattern: true, active: [], cancelReq: [], cancelled: [], people: 0 });
       }
     }
     for (const a of apps) {
@@ -365,7 +366,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
                   {dayGroups.map(g => (
                     <button key={g.key} onClick={() => pickTour(g.key)} title={`${g.title} · 출발 ${g.time || "-"}${g.ret ? " · 복귀 " + g.ret : ""}${g.note ? " · " + g.note : ""} · ${g.people}명`} style={chipStyle(g)}>
                       {g.cancelReq.length > 0 && <span style={{ color: "#dc2626" }}>● </span>}
-                      {g.title} <b>{g.people}명</b>
+                      {g.displayName || g.title} <b>{g.people}명</b>
                     </button>
                   ))}
                 </div>
@@ -387,7 +388,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
         <div ref={panelRef} style={{ marginTop: 14, background: "#fff", borderRadius: 14, boxShadow: "0 2px 12px rgba(0,0,0,0.05)", overflow: "hidden" }}>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, padding: "13px 16px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a2e" }}>
-              📅 {fmtDateKR(sel.date)} · {sel.title}
+              📅 {fmtDateKR(sel.date)} · {sel.displayName || sel.title} {sel.displayName && <small>(신청: {sel.title})</small>}
               {sel.time && <span style={{ fontWeight: 600, color: "#475569", marginLeft: 6 }}>· 출발 {sel.time}</span>}
               {sel.ret && <span style={{ fontWeight: 600, color: "#94a3b8", marginLeft: 6, fontSize: 13 }}>· 복귀 {sel.ret}</span>}
             </div>
