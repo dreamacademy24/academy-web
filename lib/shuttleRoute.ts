@@ -4,8 +4,8 @@ export function defaultHmartRoute(date: string) {
   if (date < '2026-11-30' || ![1, 3, 5].includes(dow)) return null;
   return { displayName: '뉴타운', time: '09:30am', return: '드림센터',
     route: dow === 3
-      ? '09:30 드림하우스 출발 → 09:50 H마트 도착 → 11:00 H마트 출발 → 11:10 NUU카페 도착 → 드림센터 복귀'
-      : '09:30 드림하우스 출발 → 09:50 뉴타운 버스정류장 도착 → 10:00 H마트 도착 → 11:00 H마트 출발 → 드림센터 복귀' };
+      ? '09:30 드림센터 출발 → 09:50 H마트 도착 → 11:00 H마트 출발 → 11:10 NUU카페 도착 → 드림센터 복귀'
+      : '09:30 드림센터 출발 → 09:50 뉴타운 버스정류장 도착 → 10:00 H마트 도착 → 11:00 H마트 출발 → 드림센터 복귀' };
 }
 export function routeDescription(date: string) {
   const route = defaultHmartRoute(date);

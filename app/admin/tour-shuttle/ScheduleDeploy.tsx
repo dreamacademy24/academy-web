@@ -1,9 +1,9 @@
 "use client";
-import { weekendPark } from '@/lib/shuttleTours';
+import { getShSlots, shuttleDescription } from '@/lib/shuttleTours';
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { toastErr } from "@/lib/toast";
 import { createClient } from "@supabase/supabase-js";
-import { routeDescription, readRouteDescription } from '@/lib/shuttleRoute';
+import { readRouteDescription } from '@/lib/shuttleRoute';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,31 +27,6 @@ interface ScheduleItem {
 // ─────────────────────────────────────────────────────────────
 function pad2(n: number) { return String(n).padStart(2, "0"); }
 function ymd(d: Date) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
-// 손님 화면과 동일: 그 달의 n번째 요일이 홀수/짝수인지로 판별
-function nthWeekday(d: Date) { return Math.ceil(d.getDate() / 7); }
-function tourSlotsFor(d: Date): { title: string; desc: string }[] {
-  const dow = d.getDay();
-  const odd = nthWeekday(d) % 2 === 1;
-  const park = weekendPark(ymd(d), dow === 6);
-  const parkItem = { title: park.name, desc: park.time.padStart(7, "0") };
-  if (dow === 2) return odd
-    ? [{ title: "파롤라 (Parola)", desc: "04:40pm" }]
-    : [{ title: "SM 씨사이드 쇼핑", desc: "10:30am" }];
-  if (dow === 4) return odd
-    ? [{ title: "SM 씨사이드 쇼핑", desc: "10:30am" }]
-    : [{ title: "막탄 쉬라인", desc: "05:30pm" }];
-  if (dow === 6) return odd
-    ? [{ title: "세부 사파리", desc: "08:30am" }, { title: "일콜소 (Il Corso)", desc: "04:00pm" }]
-    : [parkItem, { title: "란타우 (Lantaw)", desc: "04:00pm" }];
-  if (dow === 0) return odd
-    ? [parkItem, { title: "란타우 (Lantaw)", desc: "04:00pm" }]
-    : [{ title: "세부 사파리", desc: "08:30am" }, { title: "일콜소 (Il Corso)", desc: "04:00pm" }];
-  return [];
-}
-const HMART_DOWS = [1, 3, 5]; // 월/수/금
-const HMART_TITLE = "H-Mart 쇼핑";
-const HMART_DESC = "10:00am";
-
 export function generateItems(month: string): Omit<ScheduleItem, "id" | "created_at">[] {
   const [yStr, mStr] = month.split("-");
   const year = Number(yStr);
@@ -60,27 +35,12 @@ export function generateItems(month: string): Omit<ScheduleItem, "id" | "created
   const lastDay = new Date(year, monthIdx + 1, 0).getDate();
   for (let day = 1; day <= lastDay; day++) {
     const d = new Date(year, monthIdx, day);
-    const dow = d.getDay();
     const ds = ymd(d);
-    if (HMART_DOWS.includes(dow)) {
-      out.push({
-        type: "shuttle",
-        date: ds,
-        title: HMART_TITLE,
-        description: routeDescription(ds),
-        is_deployed: false,
-        deploy_month: month,
-      });
-    }
-    for (const p of tourSlotsFor(d)) {
-      out.push({
-        type: "shuttle",
-        date: ds,
-        title: p.title,
-        description: p.desc,
-        is_deployed: false,
-        deploy_month: month,
-      });
+    const slots = getShSlots(ds);
+    if (slots === 'holiday') continue;
+    for (const slot of slots) {
+      out.push({ type: 'shuttle', date: ds, title: slot.name,
+        description: shuttleDescription(slot), is_deployed: false, deploy_month: month });
     }
   }
   return out;

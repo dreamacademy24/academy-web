@@ -21,6 +21,17 @@ export const SHUTTLE_SPECIAL_MSG: Record<string,string> = {
 import { defaultHmartRoute } from './shuttleRoute';
 export interface ShSlot { time: string; name: string; return: string; note?: string; displayName?: string; route?: string; }
 
+export const PARKMALL_SLOT: ShSlot = { name: '파크몰 · 아얄라몰', time: '10:00am', return: '개별 복귀',
+  route: '10:00 출발 → 파크몰 → 아얄라몰 게이트워크점 · 개별 복귀' };
+export const RESORT_SLOT: ShSlot = { name: '리조트 드랍 셔틀', time: '09:15am', return: '드림센터',
+  route: '09:15 드림하우스 출발 → 09:25 제이파크 → 09:40 블루워터 마리바고 → 드림센터 복귀' };
+
+export function shuttleDescription(slot: ShSlot): string {
+  return `출발 ${slot.time} · 복귀 ${slot.return}`
+    + (slot.displayName ? `\n노선명: ${slot.displayName}` : '')
+    + (slot.route ? `\n노선: ${slot.route}` : '');
+}
+
 export function shuttleMonthKeys(first: string, last: string): string[] {
   const result: string[] = [];
   const cursor = new Date(first + '-01T00:00:00Z');
@@ -58,15 +69,15 @@ export function getShSlots(dateStr: string, extraHolidays?: Set<string>): ShSlot
   if (dow===1||dow===3||dow===5) return hmart;
   if (dow===2) return odd
     ? [{ name:'파롤라 (Parola)',       ...S_PAROLA }]
-    : [{ name:'SM 씨사이드 쇼핑',      ...S_SMSEASIDE }];
+    : [dateStr >= '2026-12-08' ? { ...PARKMALL_SLOT } : { name:'SM 씨사이드 쇼핑', ...S_SMSEASIDE }];
   if (dow===4) return odd
     ? [{ name:'SM 씨사이드 쇼핑',      ...S_SMSEASIDE }]
     : [{ name:'막탄 쉬라인',           ...S_SHRINE }];
-  if (dow===6) return odd
+  if (dow===6) return [...(dateStr >= '2026-11-28' ? [{ ...RESORT_SLOT }] : []), ...(odd
     ? [{ name:'세부 사파리',           ...S_SAFARI },
        { name:'일콜소 (Il Corso)',     ...S_ILCORSO }]
     : [weekendPark(dateStr,true),
-       { name:'란타우 (Lantaw)',       ...S_LANTAW }];
+       { name:'란타우 (Lantaw)',       ...S_LANTAW }])];
   if (dow===0) return odd
     ? [weekendPark(dateStr,false),
        { name:'란타우 (Lantaw)',       ...S_LANTAW }]
