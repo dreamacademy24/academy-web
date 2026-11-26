@@ -1,9 +1,11 @@
 // Pure synthetic tests: no network, credentials, live submissions or database writes.
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const ts=require(process.env.EXPENSE_TYPESCRIPT||'typescript');
-const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(root,'.expense-tests-'));
+const root=path.resolve(__dirname,'..'),tempRoot=fs.mkdtempSync(path.join(root,'.expense-tests-')),temp=path.join(tempRoot,'expenses');
+fs.mkdirSync(temp);
 let count=0;const ok=x=>{assert.ok(x);count++;},eq=(a,b)=>{assert.deepEqual(a,b);count++;},bad=f=>{assert.throws(f);count++;};
 try{
+ fs.writeFileSync(path.join(tempRoot,'dhRooms.js'),ts.transpileModule(fs.readFileSync(path.join(root,'lib/dhRooms.ts'),'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText);
  for(const name of ['model','catalogue','houses','permissions','validation','report','menu']){const text=fs.readFileSync(path.join(root,'lib/expenses',name+'.ts'),'utf8');const result=ts.transpileModule(text,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}});fs.writeFileSync(path.join(temp,name+'.js'),result.outputText);}
  const p=require(path.join(temp,'permissions.js')),v=require(path.join(temp,'validation.js')),c=require(path.join(temp,'catalogue.js'));
  const owner={id:p.LEDGER_OWNER_ID,username:'admin-ceo',role:'korean_admin',name:'Owner'},abby={id:'11111111-1111-4111-8111-111111111111',username:'admin-abby',role:'local_teacher',name:'Abby'},bella={...abby,id:'22222222-2222-4222-8222-222222222222',username:'admin-bella'};
@@ -25,4 +27,4 @@ try{
  const storeText=fs.readFileSync(path.join(root,'lib/expenses/store.ts'),'utf8');const storeJs=ts.transpileModule(storeText,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;const storeModule={exports:{}};new Function('require','module','exports',storeJs)(id=>id==='@/lib/portalAuth'?{portalDb:()=>{throw Error('No database in pure tests');}}:id==='./auth'?{ExpenseHttpError:class extends Error{}}:(()=>{throw Error('Unexpected test import '+id);})(),storeModule,storeModule.exports);const projected=storeModule.exports.publicClaim({...input,id:'synthetic',amount:'100',receipts:[{object_key:'private/test-only'}],payload_sha256:'test-only-internal',private_owner_field:'not for staff'});eq(projected.receipt_count,1);ok(!('receipts' in projected));ok(!('payload_sha256' in projected));ok(!('private_owner_field' in projected));eq(storeModule.exports.receiptMime(new Uint8Array([137,80,78,71,13,10,26,10])),'image/png');eq(storeModule.exports.receiptMime(new Uint8Array([60,115,118,103,62])),null);
  const oldArg=process.argv[2];process.argv[2]=path.join(temp,'report.js');require(path.join(__dirname,'test-expense-report.cjs'));process.argv[2]=oldArg;
  console.log('expense rules tests passed: '+count+' checks plus report fixtures');
-}finally{fs.rmSync(temp,{recursive:true,force:true});}
+}finally{fs.rmSync(tempRoot,{recursive:true,force:true});}
