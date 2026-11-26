@@ -3,17 +3,14 @@ import { useState, useEffect, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthed } from '@/lib/adminAuth'
+import { DH_ROOMS } from '@/lib/dhRooms'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-const ROOMS = [
-  'b13L10','b16L19',
-  'b17L7','b17L8','b17L9',
-  'b17L10','b17L11','b17L12','b17L13','b17L14','b17L15','b17L16','b17L17','b17L18'
-]
+const ROOMS = DH_ROOMS
 
 const ROOM_COLORS = [
   '#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316',

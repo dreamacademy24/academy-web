@@ -1,9 +1,9 @@
-/* 드림하우스 룸 단일 소스 — 룸 캘린더(app/dreamhouse-rooms)와 동일 목록.
-   ⚠️ 룸 추가/폐지 시 여기와 dreamhouse-rooms/page.tsx ROOMS를 함께 수정 */
+/* 드림하우스 룸 단일 소스 — 배정표, 빈방 조회, 하우스 보고 및 지출에서 공유합니다. */
 export const DH_ROOMS = [
   'b13L10', 'b16L19',
   'b17L7', 'b17L8', 'b17L9',
   'b17L10', 'b17L11', 'b17L12', 'b17L13', 'b17L14', 'b17L15', 'b17L16', 'b17L17', 'b17L18',
+  'b20L15',
 ];
 
 export const normRoom = (r: unknown) => String(r || '').replace(/\s+/g, '').toLowerCase();
