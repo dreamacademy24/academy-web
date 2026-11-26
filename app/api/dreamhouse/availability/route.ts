@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { DH_ROOMS } from '@/lib/dhRooms'
+import { countRoomOccupancy } from '@/lib/dhOccupancy'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,16 +23,19 @@ export async function GET(req: Request) {
     const CAP = DH_ROOMS.length
     let q = supabase
       .from('bookings')
-      .select('id, accom_type, booking_type, checkin_date, checkout_date, late_checkout, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
+      .select('id, accom_room, house_no, accom_type, booking_type, checkin_date, checkout_date, late_checkout, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
       .lt('checkin_date', co)
       .gte('checkout_date', ci)
       .not('status', 'ilike', '%취소%')
     if (exclude) q = q.neq('id', exclude)
-    const { data } = await q
+    const { data, error } = await q
+    if (error) return NextResponse.json({ error: '객실 현황 조회 실패' }, { status: 503 })
 
-    type Range = { ci: string; co: string }
+    type Range = { ci: string; co: string; room: string }
     const ranges: Range[] = []
     for (const b of (data || [])) {
+      if (/cancel|취소/i.test(b.status || '')) continue
+      const room = b.accom_room || b.house_no || ''
       const bt = String(b.booking_type || '')
       const at = String(b.accom_type || '')
       if (bt.includes('commute') || at.includes('통학')) continue
@@ -45,12 +49,12 @@ export async function GET(req: Request) {
         const dh = segs.find(x => String(x[0]) === 'dreamhouse')
         if (!dh) continue
         const rci = String(dh[1] || '').slice(0, 10), rco = String(dh[2] || '').slice(0, 10)
-        if (rci && rco) ranges.push({ ci: rci, co: eff(rco) })
+        if (rci && rco) ranges.push({ ci: rci, co: eff(rco), room })
         continue
       }
       if (!(at.includes('드림하우스') || bt.startsWith('dreamhouse'))) continue
       const rci = String(b.checkin_date || '').slice(0, 10), rco = String(b.checkout_date || '').slice(0, 10)
-      if (rci && rco) ranges.push({ ci: rci, co: eff(rco) })
+      if (rci && rco) ranges.push({ ci: rci, co: eff(rco), room })
     }
 
     // 날짜별 점유 카운트 ([ci, co) 구간)
@@ -60,8 +64,7 @@ export async function GET(req: Request) {
     const end = new Date(co + 'T00:00:00')
     while (d < end) {
       const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      let cnt = 0
-      for (const r of ranges) if (r.ci <= ds && ds < r.co) cnt++
+      const cnt = countRoomOccupancy(ranges.filter(r => r.ci <= ds && ds < r.co).map(r => r.room), DH_ROOMS)
       if (cnt > maxOccupancy) maxOccupancy = cnt
       if (cnt >= CAP) fullDates.push(ds)
       d.setDate(d.getDate() + 1)

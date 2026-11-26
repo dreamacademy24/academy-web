@@ -1,0 +1,12 @@
+const fs=require('node:fs'),ts=require('typescript'),assert=require('node:assert/strict');
+const mod={exports:{}};
+new Function('module','exports',ts.transpileModule(fs.readFileSync('lib/dhOccupancy.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(mod,mod.exports);
+const count=mod.exports.countRoomOccupancy;
+const inventory=['b17L7','b20L15'];
+assert.equal(count(['B17L7','B17L4'],inventory),1,'outside assigned house must not consume B20L15');
+assert.equal(count(['B17L7','b17-7'],inventory),1,'same physical house counts once');
+assert.equal(count(['B17L7',''],inventory),2,'unassigned booking still reserves capacity');
+assert.equal(count(['B17L7','미정'],inventory),2);
+assert.equal(count(['B17L7','B20L15'],inventory),2,'full registered inventory remains full');
+assert.equal(count([],inventory),0);
+console.log('PASS room inventory occupancy regressions');
