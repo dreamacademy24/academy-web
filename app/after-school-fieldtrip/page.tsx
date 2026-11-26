@@ -44,17 +44,17 @@ export default function AfterSchoolFieldtripPage() {
   const monthData = useMemo(() => {
     const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const mondayOf = (base: Date) => { const d = new Date(base); const w = d.getDay(); d.setDate(d.getDate() + (w === 0 ? -6 : 1 - w)); d.setHours(0, 0, 0, 0); return d; };
-    const months = new Map<number, Map<string, DeployedScheduleItem[]>>();
+    const months = new Map<string, Map<string, DeployedScheduleItem[]>>();
     for (const it of [...deployItems].sort((a, b) => a.date.localeCompare(b.date))) {
       const dt = new Date(it.date + "T00:00:00");
-      const m = dt.getMonth() + 1;
+      const m = it.date.slice(0, 7);
       const mk = ymd(mondayOf(dt));
       if (!months.has(m)) months.set(m, new Map());
       const wk = months.get(m)!;
       if (!wk.has(mk)) wk.set(mk, []);
       wk.get(mk)!.push(it);
     }
-    return Array.from(months.entries()).sort((a, b) => a[0] - b[0]).map(([month, wkMap]) => ({
+    return Array.from(months.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([month, wkMap]) => ({
       month,
       weeks: Array.from(wkMap.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([mk, its], i) => {
         const mon = new Date(mk + "T00:00:00"); const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
@@ -107,11 +107,13 @@ export default function AfterSchoolFieldtripPage() {
     if (!bookingMeta?.checkin || !bookingMeta?.checkout) {
       // 예약 정보 없으면 배포된 월 + 현재/다음 월
       const now = new Date();
-      const curM = now.getMonth() + 1;
+      const current = new Date(now.getFullYear(), now.getMonth(), 1);
+      const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
       const s = new Set(deployedMonths);
-      s.add(String(curM));
-      if (curM < 12) s.add(String(curM + 1));
-      return Array.from(s).sort((a, b) => Number(a) - Number(b));
+      s.add(monthKey(current));
+      s.add(monthKey(next));
+      return Array.from(s).sort((a, b) => a.localeCompare(b));
     }
     // 체크인~체크아웃 사이 모든 월 생성
     const sY = parseInt(bookingMeta.checkin.slice(0, 4), 10);
@@ -121,7 +123,7 @@ export default function AfterSchoolFieldtripPage() {
     const months: string[] = [];
     let y = sY, m = sM;
     while (y < eY || (y === eY && m <= eM)) {
-      months.push(String(m));
+      months.push(`${y}-${String(m).padStart(2,"0")}`);
       m++;
       if (m > 12) { m = 1; y++; }
     }
@@ -161,11 +163,9 @@ export default function AfterSchoolFieldtripPage() {
     document.querySelectorAll(".schedule-item").forEach((item) => {
       const cb = item.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
       if (!cb) return;
-      const parts = cb.value.split("-");
-      if (parts.length < 2) return;
-      const month = parseInt(parts[0], 10);
-      const day = parseInt(parts[1], 10);
-      const scheduleDate = new Date(pht.getFullYear(), month - 1, day);
+      const date = cb.dataset.date;
+      if (!date) return;
+      const scheduleDate = new Date(date + "T00:00:00");
       const isFieldtrip = item.classList.contains("fieldtrip");
       let deadline: Date;
       if (isFieldtrip) {
@@ -200,12 +200,8 @@ export default function AfterSchoolFieldtripPage() {
       if (!cb) return;
       // 예약정보 없으면 전체 노출
       if (!ci || !co) { el.style.display = ""; return; }
-      const parts = cb.value.split("-");
-      if (parts.length < 2) return;
-      const month = parseInt(parts[0], 10);
-      const day = parseInt(parts[1], 10);
-      // 스케줄은 2026년 (visibleMonths와 동일 피벗)
-      const ymd = `2026-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const ymd = cb.dataset.date;
+      if (!ymd) return;
       if (ymd >= ci && ymd <= co) {
         el.style.display = "";
       } else {
@@ -282,11 +278,7 @@ export default function AfterSchoolFieldtripPage() {
     try {
       // 1) Supabase 저장 = 앱의 source of truth. 구글시트 성공 여부와 무관하게 먼저 확실히 저장.
       // 콤보 예약: 선택된 날짜 중 대표 날짜로 현재 숙소 판별 (첫 날짜 기준)
-      const firstToken = scheduleValues.split(",")[0]?.trim() || "";
-      const firstParts = firstToken.split("-");
-      const firstYmd = firstParts.length >= 2
-        ? `2026-${String(firstParts[0]).padStart(2, "0")}-${String(firstParts[1]).padStart(2, "0")}`
-        : "";
+      const firstYmd = (checked[0] as HTMLInputElement | undefined)?.dataset.date || "";
       const accom = resolveComboAccom(bookingMeta, firstYmd);
       const roomLabel = accom.room || accom.nameEn; // DH→"B17L8", JP→"J-Park"
       const { error: insErr } = await supabase.from("fieldtrip_applications").insert({
@@ -615,7 +607,7 @@ export default function AfterSchoolFieldtripPage() {
                         data-active={activeMonth === m ? "true" : "false"}
                         onClick={() => setActiveMonth(m)}
                       >
-                        {m}월
+                        {m.slice(0,4)}년 {Number(m.slice(5))}월
                       </button>
                     ))}
                   </div>
@@ -643,7 +635,7 @@ export default function AfterSchoolFieldtripPage() {
                                   const isFt = it.type === "fieldtrip";
                                   return (
                                     <label key={it.id} className={`schedule-item${isFt ? " fieldtrip" : ""}`}>
-                                      <input type="checkbox" name="schedule" value={tokenForItem(it)} />
+                                      <input type="checkbox" name="schedule" data-date={it.date} value={tokenForItem(it)} />
                                       <div className="schedule-label">
                                         <span className="schedule-main">{dt.getMonth() + 1}/{dt.getDate()} ({KR_DOW[dt.getDay()]}) · {it.title}{isFt && <span className="fieldtrip-badge">필드트립</span>}</span>
                                         <span className="schedule-sub">{timeOfDate(it.date, it.type)}{it.description ? ` · ${it.description}` : ""}</span>

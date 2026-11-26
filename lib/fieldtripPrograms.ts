@@ -79,8 +79,8 @@ export function ftProgramsAsItems(year = 2026): DeployedScheduleItem[] {
 // 배포 일정 + 하드코딩 베이스라인 병합 (같은 날짜는 배포가 우선) — 손님폼/티쳐뷰 데이터 손실 방지
 export function mergeWithFallback(deployed: DeployedScheduleItem[]): DeployedScheduleItem[] {
   const byMd: Record<string, DeployedScheduleItem> = {};
-  for (const it of ftProgramsAsItems()) byMd[mdFromDate(it.date)] = it;
-  for (const it of deployed) byMd[mdFromDate(it.date)] = it; // 실제 배포가 덮어씀
+  for (const it of ftProgramsAsItems()) byMd[it.date] = it;
+  for (const it of deployed) byMd[it.date] = it; // 실제 배포가 덮어씀
   return Object.values(byMd).sort((a, b) => a.date.localeCompare(b.date));
 }
 
