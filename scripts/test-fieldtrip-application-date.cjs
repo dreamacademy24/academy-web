@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),ts=require('typescript'),assert=require('assert/strict');
+const exp={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/fieldtripApplicationDate.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:exp});
+const f=exp.fieldtripApplicationDate;
+assert.equal(f('1-27-as',{checkin_date:'2027-01-02',checkout_date:'2027-01-30'},'2026-11-26'),'2027-01-27');
+assert.equal(f('12-30-as',{checkin_date:'2026-12-20',checkout_date:'2027-01-30'},'2026-11-26'),'2026-12-30');
+assert.equal(f('1-3-as',{checkin_date:'2026-12-20',checkout_date:'2027-01-30'},'2026-11-26'),'2027-01-03');
+assert.equal(f('1-3-as',null,'2026-11-26'),'2027-01-03');
+assert.equal(f('9-8-as',null,'2026-09-09'),'2026-09-08');
+assert.equal(f('2-30-as',null,'2026-11-26'),null);
+assert.equal(f('1-3-as',{checkin_date:'2028-01-01',checkout_date:'2028-02-01'},'2027-03-01'),'2028-01-03');
+console.log('PASS fieldtrip booking years, year boundary, unlinked and retrospective dates, invalid date');

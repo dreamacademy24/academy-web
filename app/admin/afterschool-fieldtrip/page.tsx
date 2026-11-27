@@ -6,7 +6,8 @@ import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import AfterFieldDeploy from "./AfterFieldDeploy";
 import { toKR } from "@/lib/afterschoolNames";
-import { KR_DOW, parseToken, resolveProgram, loadDeployedSchedule, buildScheduleByMd, tokenForItem, type DeployedScheduleItem } from "@/lib/fieldtripPrograms";
+import { KR_DOW, resolveProgram, loadDeployedSchedule, tokenForItem, type DeployedScheduleItem } from "@/lib/fieldtripPrograms";
+import { fieldtripApplicationDate } from "@/lib/fieldtripApplicationDate";
 import { resolveComboAccom } from "@/lib/bookingTypes";
 
 const supabase = createClient(
@@ -51,6 +52,7 @@ interface FlatRow {
   token: string;
   cancelReq: boolean;
   cancelled: boolean;
+  date: string;
   month: number;
   day: number;
   programName: string;
@@ -65,11 +67,10 @@ export default function AfterschoolFieldtripAdminPage() {
   useEffect(() => {if(new URLSearchParams(window.location.search).get("tab")==="deploy")setMainTab("deploy");}, []);
   const [apps, setApps] = useState<FieldtripApp[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedMonths, setExpandedMonths] = useState<Set<number>>(new Set());
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [monthsInitDone, setMonthsInitDone] = useState(false);
   const [bookerNames, setBookerNames] = useState<Record<string, string>>({}); // booking_id → 예약자 실명
   const [bookingMap, setBookingMap] = useState<Record<string, any>>({}); // booking_id → 예약 seg 데이터
-  const [scheduleByMd, setScheduleByMd] = useState<Record<string, DeployedScheduleItem>>({}); // 배포 일정(월-일 → 항목)
   const [listView, setListView] = useState<"month" | "week">("month");
   const [weekStart, setWeekStart] = useState<Date>(() => mondayOfA(new Date()));
   const shiftWeek = (delta: number) => { const d = new Date(weekStart); d.setDate(d.getDate() + delta * 7); setWeekStart(mondayOfA(d)); };
@@ -90,7 +91,7 @@ export default function AfterschoolFieldtripAdminPage() {
   const load = useCallback(async () => {
     setLoading(true);
     // 배포된 일정(프로그램명) 로드 — 신청 토큰을 날짜로 해석 + 직원 신청 모달용 원본
-    try { const deployed = await loadDeployedSchedule(supabase); setDeployedItems(deployed); setScheduleByMd(buildScheduleByMd(deployed)); } catch { /* noop */ }
+    try { const deployed = await loadDeployedSchedule(supabase); setDeployedItems(deployed); } catch { /* noop */ }
     // 직원 신청 모달용 학생 목록 (이름 + 예약자 + 방번호)
     try {
       const { data: st } = await supabase.from("students").select("id, name_kr, name_en, booking_id");
@@ -98,7 +99,7 @@ export default function AfterschoolFieldtripAdminPage() {
       const bids = Array.from(new Set(rows.map(r => r.booking_id).filter(Boolean))) as string[];
       const bmap: Record<string, any> = {};
       if (bids.length) {
-        const { data: bks } = await supabase.from("bookings").select("id, booker_name, house_no, accom_room, seg1_type, seg2_type, seg2_checkin, accom_type").in("id", bids);
+        const { data: bks } = await supabase.from("bookings").select("id, booker_name, house_no, accom_room, seg1_type, seg2_type, seg2_checkin, accom_type, checkin_date, checkout_date").in("id", bids);
         (bks || []).forEach((b: any) => { bmap[b.id] = b; });
       }
       setStudents(rows.map(r => {
@@ -121,7 +122,7 @@ export default function AfterschoolFieldtripAdminPage() {
       // booking_id → 예약자 실명 매핑 (픽업·셔틀과 동일하게 실명 표시)
       const ids = Array.from(new Set((data as FieldtripApp[]).map(a => a.booking_id).filter(Boolean))) as string[];
       if (ids.length > 0) {
-        const { data: bks } = await supabase.from("bookings").select("id, booker_name, house_no, accom_room, seg1_type, seg2_type, seg2_checkin, accom_type").in("id", ids);
+        const { data: bks } = await supabase.from("bookings").select("id, booker_name, house_no, accom_room, seg1_type, seg2_type, seg2_checkin, accom_type, checkin_date, checkout_date").in("id", ids);
         const map: Record<string, string> = {};
         const bkMap: Record<string, any> = {};
         (bks || []).forEach((b: any) => { map[b.id] = (b.booker_name || "").trim(); bkMap[b.id] = b; });
@@ -141,8 +142,7 @@ export default function AfterschoolFieldtripAdminPage() {
     setAddSaving(true);
     // 콤보 예약: 선택 날짜 중 첫 날짜 기준으로 현재 숙소 판별
     const firstToken = Array.from(addTokens)[0] || "";
-    const fp = firstToken.split("-");
-    const firstYmd = fp.length >= 2 ? `2026-${String(fp[0]).padStart(2, "0")}-${String(fp[1]).padStart(2, "0")}` : "";
+    const firstYmd = fieldtripApplicationDate(firstToken, stu._booking, new Date().toISOString()) || "";
     const accom = resolveComboAccom(stu._booking, firstYmd);
     const roomLabel = accom.room || accom.nameEn;
     const { error } = await supabase.from("fieldtrip_applications").insert({
@@ -205,7 +205,7 @@ export default function AfterschoolFieldtripAdminPage() {
     toastOk("삭제됐어요 (티쳐 표에도 반영)");
   }
 
-  function toggleMonth(m: number) {
+  function toggleMonth(m: string) {
     setExpandedMonths(prev => {
       const next = new Set(prev);
       if (next.has(m)) next.delete(m); else next.add(m);
@@ -228,12 +228,16 @@ export default function AfterschoolFieldtripAdminPage() {
     const cxSet = new Set(String((a as unknown as Record<string, unknown>).cancelled_dates || "").split(",").map((t: string) => t.trim()).filter(Boolean));
     let pushedAny = false;
     for (const token of tokens) {
-      const r = resolveProgram(token, scheduleByMd);
+      const date = fieldtripApplicationDate(token, bk, a.created_at);
+      if (!date) continue;
+      const item = deployedItems.find(it => it.date === date);
+      const md = `${Number(date.slice(5, 7))}-${Number(date.slice(8, 10))}`;
+      const r = resolveProgram(token, item ? { [md]: item } : {});
       if (!r) continue;
       // 예약 데이터에서 룸 번호 라이브 조회 (스냅샷 rawRoom은 폴백)
       let room = rawRoom;
       if (bk) {
-        const ymd = `2026-${String(r.month).padStart(2, "0")}-${String(r.day).padStart(2, "0")}`;
+        const ymd = date;
         const accom = resolveComboAccom(bk, ymd);
         const liveRoom = accom.room || accom.nameEn;
         if (liveRoom) room = liveRoom;
@@ -242,7 +246,7 @@ export default function AfterschoolFieldtripAdminPage() {
         appId: a.id, childName, reserver, room, request, status, token,
         cancelled: cxSet.has(token) || status === "cancelled",
         cancelReq: !cxSet.has(token) && (reqSet.has(token) || status === "cancel_requested"),
-        month: r.month, day: r.day,
+        date, month: r.month, day: r.day,
         programName: r.name,
         isFieldtrip: r.isFieldtrip,
         time: r.time,
@@ -252,12 +256,12 @@ export default function AfterschoolFieldtripAdminPage() {
     if (!pushedAny) legacy.push(a);
   }
 
-  // 중복 제거: 같은 아이 + 같은 날짜 + 같은 프로그램 → 첫 번째만 유지
+  // 같은 신청 안의 중복 토큰만 제거. 재신청과 원래 취소 요청은 각각 표시.
   const _seenFlat = new Set<string>();
   const _dedupIdx: number[] = [];
   for (let i = 0; i < flat.length; i++) {
     const r = flat[i];
-    const key = `${r.childName}||${r.month}-${r.day}||${r.programName}`;
+    const key = `${r.appId}||${r.token}`;
     if (_seenFlat.has(key)) continue;
     _seenFlat.add(key);
     _dedupIdx.push(i);
@@ -265,23 +269,21 @@ export default function AfterschoolFieldtripAdminPage() {
   const dedupFlat = _dedupIdx.map(i => flat[i]);
 
   // 오늘 이전 날짜 제거
-  const _now = new Date();
-  const _todayM = _now.getMonth() + 1;
-  const _todayD = _now.getDate();
-  const activFlat = dedupFlat.filter(r => r.month > _todayM || (r.month === _todayM && r.day >= _todayD));
+  const today = ymdA(new Date());
+  const activFlat = dedupFlat.filter(r => r.date >= today || r.cancelReq);
 
   // 날짜 기준 그룹 (같은 날짜의 다른 토큰 키도 합침 — 예: "6-15-watergun" + "6-15-as" → 동일 그룹)
   const groupMap = new Map<string, FlatRow[]>();
   for (const r of activFlat) {
-    const groupKey = `${r.month}-${r.day}`;
+    const groupKey = r.date;
     const arr = groupMap.get(groupKey) || [];
     arr.push(r);
     groupMap.set(groupKey, arr);
   }
   // 월 → 그룹들
-  const monthMap = new Map<number, [string, FlatRow[]][]>();
+  const monthMap = new Map<string, [string, FlatRow[]][]>();
   for (const [token, rows] of groupMap.entries()) {
-    const m = rows[0].month;
+    const m = rows[0].date.slice(0, 7);
     const arr = monthMap.get(m) || [];
     arr.push([token, rows]);
     monthMap.set(m, arr);
@@ -290,16 +292,16 @@ export default function AfterschoolFieldtripAdminPage() {
   for (const arr of monthMap.values()) {
     arr.sort((a, b) => (a[1][0].day - b[1][0].day) || a[1][0].programName.localeCompare(b[1][0].programName));
   }
-  const monthChapters = Array.from(monthMap.entries()).sort((a, b) => a[0] - b[0]);
+  const monthChapters = Array.from(monthMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
 
   // 주간 뷰 — 선택 주(월~일)의 날짜별 → 프로그램(token) 그룹
   const weekDays = (() => {
     const arr: { date: Date; key: string; label: string; groups: [string, FlatRow[]][] }[] = [];
     for (let i = 0; i < 7; i++) { const d = new Date(weekStart); d.setDate(d.getDate() + i); arr.push({ date: d, key: ymdA(d), label: `${d.getMonth() + 1}/${d.getDate()} (${KR_DOW[d.getDay()]})`, groups: [] }); }
-    const year = weekStart.getFullYear();
+
     const dayMap = new Map<string, Map<string, FlatRow[]>>();
     for (const r of dedupFlat) {
-      const k = ymdA(new Date(year, r.month - 1, r.day));
+      const k = r.date;
       if (!arr.find((x) => x.key === k)) continue;
       let g = dayMap.get(k); if (!g) { g = new Map(); dayMap.set(k, g); }
       const a = g.get(r.token) || []; a.push(r); g.set(r.token, a);
@@ -311,22 +313,13 @@ export default function AfterschoolFieldtripAdminPage() {
 
   // 기본 펼침 월 초기화 (현재 월 또는 가장 가까운 미래 월)
   useEffect(() => {
-    if (monthsInitDone) return;
-    if (apps.length === 0) return;
-    const months = new Set<number>();
-    for (const a of apps) {
-      for (const token of (a.date || "").split(",").map(t => t.trim()).filter(Boolean)) {
-        const p = parseToken(token);
-        if (p) months.add(p.month);
-      }
-    }
-    if (months.size === 0) { setMonthsInitDone(true); return; }
-    const sorted = Array.from(months).sort((a, b) => a - b);
-    const curM = new Date().getMonth() + 1;
-    const pick = sorted.find(m => m === curM) || sorted.find(m => m > curM) || sorted[sorted.length - 1];
+    if (monthsInitDone || loading || !monthChapters.length) return;
+    const keys = monthChapters.map(([key]) => key);
+    const current = ymdA(new Date()).slice(0, 7);
+    const pick = keys.find(key => key >= current) || keys[0];
     setExpandedMonths(new Set([pick]));
     setMonthsInitDone(true);
-  }, [apps, monthsInitDone]);
+  }, [loading, monthChapters, monthsInitDone]);
 
   if (!authed) return null;
 
@@ -429,7 +422,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                 >
                   <span style={{fontSize:11, color:"#94a3b8"}}>{open ? "▼" : "▶"}</span>
                   <span style={{width:8, height:8, borderRadius:"50%", background:"#16a34a"}}></span>
-                  <span style={{fontSize:14.5, fontWeight:800, color:"#1a1a2e"}}>{month}월</span>
+                  <span style={{fontSize:14.5, fontWeight:800, color:"#1a1a2e"}}>{month.slice(0, 4)}년 {Number(month.slice(5))}월</span>
                   <span style={{fontSize:12.5, color:"#94a3b8", fontWeight:600}}>{mCount}건</span>
                   <span style={{marginLeft:"auto", fontSize:12, fontWeight:800, color:"#15803d", background:"#f0fdf4", border:"1px solid #bbf7d0", padding:"3px 12px", borderRadius:999}}>총 {mPeople}명</span>
                 </div>
@@ -438,7 +431,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                   {mGroups.map(([token, rows]) => {
                     const r0 = rows[0];
                     const total = rows.filter(r => !r.cancelled).length;
-                    const dt = new Date(new Date().getFullYear(), r0.month - 1, r0.day);
+                    const dt = new Date(r0.date + "T00:00:00");
                     const dowStr = isNaN(dt.getTime()) ? "" : ` (${KR_DOW[dt.getDay()]})`;
                     return (
                       <div key={token} style={{background:"#fff", border:"1px solid #e2e8f0", borderRadius:14, padding:"12px 16px", boxShadow:"0 1px 4px rgba(15,23,42,0.04)"}}>
@@ -564,7 +557,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
               {groups.length===0 ? <div style={{padding:14,color:"#cbd5e1",fontSize:13}}>배포된 일정이 없습니다.</div> :
                groups.map(([mk,its]) => (
                 <div key={mk}>
-                  <div style={{padding:"6px 12px",fontSize:12,fontWeight:800,color:"#15803d",background:"#f0fdf4",position:"sticky",top:0}}>📅 {Number(mk.split("-")[1])}월</div>
+                  <div style={{padding:"6px 12px",fontSize:12,fontWeight:800,color:"#15803d",background:"#f0fdf4",position:"sticky",top:0}}>📅 {mk.slice(0, 4)}년 {Number(mk.split("-")[1])}월</div>
                   {its.map(it => { const tok=tokenForItem(it); const on=addTokens.has(tok); const dt=new Date(it.date+"T00:00:00"); const ft=it.type==="fieldtrip"; return (
                     <label key={it.id} style={{display:"flex",alignItems:"center",gap:9,padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f8fafc",background:on?(ft?"#fff7ed":"#eff6ff"):"#fff"}}>
                       <input type="checkbox" checked={on} onChange={()=>setAddTokens(prev=>{const n=new Set(prev); if(n.has(tok))n.delete(tok); else n.add(tok); return n;})} />
