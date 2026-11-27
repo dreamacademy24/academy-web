@@ -21,6 +21,10 @@ export const SHUTTLE_SPECIAL_MSG: Record<string,string> = {
 import { defaultHmartRoute } from './shuttleRoute';
 export interface ShSlot { time: string; name: string; return: string; note?: string; displayName?: string; route?: string; }
 
+// Preserve published exceptions and the already-booked Dec 5 Safari while
+// staff confirm that additional conflict. Regeneration must not erase them.
+export const SHUTTLE_PRESERVED_DATES = new Set(['2026-12-05', '2026-12-06', '2026-12-12', '2027-01-24']);
+
 export const PARKMALL_SLOT: ShSlot = { name: '파크몰 · 아얄라몰', time: '10:00am', return: '개별 복귀',
   route: '10:00 출발 → 파크몰 → 아얄라몰 게이트워크점 · 개별 복귀' };
 export const RESORT_SLOT: ShSlot = { name: '리조트 드랍 셔틀', time: '09:15am', return: '드림센터',
@@ -66,6 +70,23 @@ export function getShSlots(dateStr: string, extraHolidays?: Set<string>): ShSlot
   const S_SMSEASIDE= { time:'10:30am', return:'-',               note:'개별 복귀' };
 
   const hmart: ShSlot[] = [{ name:'H-Mart 쇼핑', ...S_HMART, ...defaultHmartRoute(dateStr) }];
+  if (dateStr >= '2026-12-01' && !SHUTTLE_PRESERVED_DATES.has(dateStr)) {
+    const resort = { ...RESORT_SLOT, route: RESORT_SLOT.route!.replace('드림하우스', '드림센터') };
+    const safari = { name:'세부 사파리', ...S_SAFARI, route:'08:30 드림센터 출발 → 세부 사파리 → 15:00 사파리 출발 → 드림센터 복귀 · 유료 200페소' };
+    const ilcorso = { name:'일콜소 (Il Corso)', ...S_ILCORSO, route:'16:00 드림센터 출발 → 일콜소 → 도착 후 2시간 30분 뒤 출발 → 드림센터 복귀' };
+    const lantaw = { name:'란타우 (Lantaw)', ...S_LANTAW, route:'16:00 드림센터 출발 → 란타우 → 도착 후 2시간 30분 뒤 출발 → 드림센터 복귀' };
+    const anjo = { name:'안조 월드 (Anjo World)', time:'1:00pm', return:'20:00', route:'13:00 드림센터 출발 → 안조월드 → 20:00 안조월드 출발 → 드림센터 복귀' };
+    const fun = { name:'세부 쇼핑 & 펀 투어', displayName:'세부 쇼핑 & 펀 투어', time:'2:00pm', return:'20:00', route:'14:00 드림센터 출발 → SM씨사이드 → 오션파크 → 펀파크 → 20:00 SM씨사이드 출발 → 드림센터 복귀' };
+    if ([1,3,5].includes(dow)) return hmart.map(slot => ({ ...slot, name:slot.displayName! }));
+    if (dow === 2) return odd
+      ? [{ name:'파롤라 (Parola)', ...S_PAROLA, route:'16:40 드림센터 출발 → 파롤라 → 식사 후 출발 → 드림센터 복귀' }]
+      : [{ ...PARKMALL_SLOT, time:'10:30am', route:'10:30 드림센터 출발 → 파크몰 → 아얄라몰 게이트워크점 · 개별 복귀' }];
+    if (dow === 4) return odd
+      ? [{ name:'SM 씨사이드 쇼핑', ...S_SMSEASIDE, return:'개별 복귀', route:'10:30 드림센터 출발 → SM씨사이드 · 개별 복귀' }]
+      : [{ name:'막탄 쉬라인', ...S_SHRINE, route:'17:30 드림센터 출발 → 막탄 쉬라인 → 도착 후 40분 뒤 출발 → 드림센터 복귀' }];
+    if (dow === 6) return odd ? [resort, anjo, lantaw] : [resort, ilcorso, safari];
+    if (dow === 0) return odd ? [ilcorso, safari] : [lantaw, fun];
+  }
   if (dow===1||dow===3||dow===5) return hmart;
   if (dow===2) return odd
     ? [{ name:'파롤라 (Parola)',       ...S_PAROLA }]

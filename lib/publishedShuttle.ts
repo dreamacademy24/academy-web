@@ -10,7 +10,7 @@ export function publishedShuttleSlots(date: string, rows: PublishedShuttle[], ho
   if (!rows.some(row => row.date.slice(0, 7) === date.slice(0, 7))) return fallback;
   return rows.filter(row => row.date === date).map(row => {
     const known = Array.from({ length: 14 }, (_, i) => getShSlots(`2026-09-${String(7 + i).padStart(2, '0')}`))
-      .flatMap(slots => slots === 'holiday' ? [] : slots).find(slot => slot.name === row.title);
+      .flatMap(slots => slots === 'holiday' ? [] : slots).find(slot => slot.name === row.title || (row.title === '세부 쇼핑 & 펀 투어' && slot.name === '펀파크 (Fun Park)'));
     const description = (row.description || '').trim();
     const route = readRouteDescription(description);
     const [departure, back] = route.timing.split(/\s*·\s*복귀\s*/);

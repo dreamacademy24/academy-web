@@ -1,5 +1,5 @@
 "use client";
-import { getShSlots, shuttleDescription } from '@/lib/shuttleTours';
+import { getShSlots, shuttleDescription, SHUTTLE_PRESERVED_DATES } from '@/lib/shuttleTours';
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { toastErr } from "@/lib/toast";
 import { createClient } from "@supabase/supabase-js";
@@ -157,16 +157,22 @@ export default function ScheduleDeploy() {
 
   async function runGenerate() {
     if (busy) return;
-    const gen = generateItems(month);
-    if (gen.length === 0) { toastErr("생성할 항목이 없습니다."); return; }
-    const ok = confirm(`${monthLabel(month)} 투어셔틀 ${gen.length}건을 자동 생성합니다.\n해당 월의 기존 셔틀 항목은 모두 삭제됩니다. 계속할까요?`);
-    if (!ok) return;
     setBusy("generate");
+    const { data: booked, error: bookedError } = await supabase.from("shuttle_applications")
+      .select("tour_date,status").gte("tour_date", month + "-01").lt("tour_date", monthShift(month, 1) + "-01");
+    if (bookedError) { setBusy(""); toastErr("기존 신청 확인 실패: " + bookedError.message); return; }
+    const preserved = new Set(SHUTTLE_PRESERVED_DATES);
+    for (const row of booked || []) if (!["cancelled", "cancel", "취소"].includes(row.status || "")) preserved.add(row.tour_date);
+    const gen = generateItems(month).filter(item => !preserved.has(item.date));
+    if (gen.length === 0) { setBusy(""); toastErr("생성할 항목이 없습니다."); return; }
+    const ok = confirm(`${monthLabel(month)} 투어셔틀 ${gen.length}건을 자동 생성합니다.\n기존 신청이 있는 날짜와 지정 예외 날짜는 유지하고, 나머지 날짜의 셔틀 항목을 교체합니다. 계속할까요?`);
+    if (!ok) { setBusy(""); return; }
     const { error: delErr } = await supabase
       .from("schedule_items")
       .delete()
       .eq("deploy_month", month)
-      .eq("type", "shuttle");
+      .eq("type", "shuttle")
+      .not("date", "in", `(${Array.from(preserved).join(",")})`);
     if (delErr) {
       setBusy("");
       toastErr("기존 항목 삭제 실패: " + delErr.message);
